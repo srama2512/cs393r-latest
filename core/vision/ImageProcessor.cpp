@@ -265,18 +265,27 @@ void ImageProcessor::processFrame(){
 }
 
 void ImageProcessor::detectBall() {
-if(getSegImg() == NULL)
-return;
-  unordered_map<int, RLE*> blobs = calculateBlobs(iparams_.height, iparams_.width);
-  for(auto it = blobs.begin(); it != blobs.end(); ++it) {
-   RLE* b = it->second;
-    if(b->parent != b->curr)
-     continue;
-    if(b->color != c_FIELD_GREEN)
-     continue;
-    // cout << "Orange: " << b->npixels << ", ";
- }
-  cout << endl;
+  if(getSegImg() == NULL)
+  return;
+  WorldObject* ball = &vblocks_.world_object->objects_[WO_BALL];
+  ball->imageCenterX = 100;
+  ball->imageCenterY = 100;
+  Position p = cmatrix_.getWorldPosition(imageX, imageY);
+  ball->visionBearing = cmatrix_.bearing(p);
+  ball->visionElevation = cmatrix_.elevation(p);
+  ball->visionDistance = cmatrix_.groundDistance(p);
+  ball->seen = true;
+
+  //unordered_map<int, RLE*> blobs = calculateBlobs(iparams_.height, iparams_.width);
+  //for(auto it = blobs.begin(); it != blobs.end(); ++it) {
+  // RLE* b = it->second;
+  //  if(b->parent != b->curr)
+  //   continue;
+  //  if(b->color != c_FIELD_GREEN)
+  //   continue;
+  //  // cout << "Orange: " << b->npixels << ", ";
+  //}
+  //cout << endl;
 }
 
 void ImageProcessor::findBall(int& imageX, int& imageY) {
