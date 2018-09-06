@@ -147,13 +147,14 @@ class Playing(StateMachine):
         lookatball = self.LookAtBall(3.0)
 
         center = self.HeadPos(0, 0)
+        center_2 = self.HeadPos(0, 0)
         left = self.HeadPos(22, 0)
         right = self.HeadPos(-22, 0)
         up = self.HeadPos(0, 22, 4.0)
         down = self.HeadPos(0, -22, 4.0)
         # self.trans(readsensors, C, off, C)
         # self.trans(center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), off, C)
-        self.trans(center, T(2.0), lookatball, T(3.0), off)
+        self.trans(center, T(2.0), stand, C, lookatball, T(3.0), center_2, T(2.0), sit, C, off)
 
         # self.trans(stand, C, walkturn, T(5.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)

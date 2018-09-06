@@ -266,14 +266,20 @@ void ImageProcessor::processFrame(){
 
 void ImageProcessor::detectBall() {
   if(getSegImg() == NULL)
-  return;
+      return;
+  int imageX, imageY;
+  findBall(imageX, imageY);
+
   WorldObject* ball = &vblocks_.world_object->objects_[WO_BALL];
-  ball->imageCenterX = 100;
-  ball->imageCenterY = 100;
+
+  ball->imageCenterX = imageX;
+  ball->imageCenterY = imageY;
+
   Position p = cmatrix_.getWorldPosition(imageX, imageY);
   ball->visionBearing = cmatrix_.bearing(p);
   ball->visionElevation = cmatrix_.elevation(p);
   ball->visionDistance = cmatrix_.groundDistance(p);
+
   ball->seen = true;
 
   //unordered_map<int, RLE*> blobs = calculateBlobs(iparams_.height, iparams_.width);
@@ -289,7 +295,7 @@ void ImageProcessor::detectBall() {
 }
 
 void ImageProcessor::findBall(int& imageX, int& imageY) {
-  imageX = imageY = 0;
+  imageX = imageY = 200;
 }
 
 
