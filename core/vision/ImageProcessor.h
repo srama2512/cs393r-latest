@@ -27,8 +27,14 @@ struct RLE {
     int npixels;
     int color;
     int rank;
+	int xi;
+	int xf;
+	int yi;
+	int yf;
+	int xsum;
+	int ysum;
 
-    RLE(int l, int r, int idx, int c) {
+    RLE(int y, int l, int r, int idx, int c) {
         lcol = l;
         rcol = r;
         parent = idx;
@@ -36,6 +42,10 @@ struct RLE {
         npixels = r - l + 1;
         color = c;
         rank = 1;
+		xi = l; xf = r;
+		yi = y; yf = y;
+		xsum = ((r + l) / 2) * (r - l + 1);
+		ysum = y * (r - l + 1);
     }
 };
 
@@ -45,6 +55,7 @@ struct RLECompare {
 	}
 };
 
+Blob makeBlob(RLE* r);
 
 /// @ingroup vision
 class ImageProcessor {
@@ -75,7 +86,8 @@ class ImageProcessor {
 	void mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rle_ptr); 
 	int getParent(int idx, unordered_map<int, RLE*> &rle_ptr); 
 	void mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding, unordered_map<int, RLE*> &rle_ptr); 
-	unordered_map<int, RLE*> calculateBlobs(int height, int width); 
+	void calculateBlobs(); 
+    vector<Blob> filterBlobs(uint8_t color, int size);
     void detectBall();
     void findBall(int& imageX, int& imageY);
   private:
@@ -101,6 +113,9 @@ class ImageProcessor {
     //void saveImg(std::string filepath);
     int topFrameCounter_ = 0;
     int bottomFrameCounter_ = 0;
+    
+    // blob store
+    vector<Blob> detected_blobs;
 };
 
 #endif

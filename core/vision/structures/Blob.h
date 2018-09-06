@@ -8,6 +8,7 @@
 /// @ingroup vision
 struct Blob {
   uint16_t xi, xf, dx, yi, yf, dy;
+  uint8_t color;
   uint16_t lpCount;
   std::vector<uint32_t> lpIndex;
   float diffStart;
@@ -30,6 +31,6 @@ struct Blob {
 
 /// @ingroup vision
 bool sortBlobAreaPredicate(Blob* left, Blob* right);
-
+bool BlobCompare(Blob a, Blob b);
 
 #endif

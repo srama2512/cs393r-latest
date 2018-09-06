@@ -15,14 +15,14 @@ vector<RLE*> ImageProcessor::getRLERow(int y, int width, int &start_idx) {
         if(c == prev_color)
             continue;
         else {
-            encoding.push_back(new RLE(prev_idx, x - 1, start_idx, prev_color));
+            encoding.push_back(new RLE(y, prev_idx, x - 1, start_idx, prev_color));
             //cout << x - prev_idx << "," << (int) prev_color << " ";
 			start_idx++;
             prev_color = c;
             prev_idx = x;
         }
     }
-    encoding.push_back(new RLE(prev_idx, width - 1, start_idx, prev_color));
+    encoding.push_back(new RLE(y, prev_idx, width - 1, start_idx, prev_color));
     //cout << width - prev_idx << "," << (int) prev_color << " ";
 	//cout << endl;
     start_idx++;
@@ -55,18 +55,33 @@ void ImageProcessor::mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rl
     if(r1 > r2) {
         rle_ptr[p2]->parent = p1;
         rle_ptr[p1]->npixels += rle_ptr[p2]->npixels;
-        // std::cout << "pixels: " << rle_ptr[p1]->npixels;
+		rle_ptr[p1]->xi = min(rle_ptr[p1]->xi, rle_ptr[p2]->xi);
+		rle_ptr[p1]->xf = max(rle_ptr[p1]->xf, rle_ptr[p2]->xf);
+        rle_ptr[p1]->yi = min(rle_ptr[p1]->yi, rle_ptr[p2]->yi);
+		rle_ptr[p1]->yf = max(rle_ptr[p1]->yf, rle_ptr[p2]->yf);
+        rle_ptr[p1]->xsum += rle_ptr[p2]->xsum;
+		rle_ptr[p1]->ysum += rle_ptr[p2]->ysum;
     }
     else if(r2 > r1) {
         rle_ptr[p1]->parent = p2;
         rle_ptr[p2]->npixels += rle_ptr[p1]->npixels;
-        // std::cout << "pixels: " << rle_ptr[p2]->npixels;
+		rle_ptr[p2]->xi = min(rle_ptr[p1]->xi, rle_ptr[p2]->xi);
+		rle_ptr[p2]->xf = max(rle_ptr[p1]->xf, rle_ptr[p2]->xf);
+        rle_ptr[p2]->yi = min(rle_ptr[p1]->yi, rle_ptr[p2]->yi);
+		rle_ptr[p2]->yf = max(rle_ptr[p1]->yf, rle_ptr[p2]->yf);
+        rle_ptr[p2]->xsum += rle_ptr[p1]->xsum;
+		rle_ptr[p2]->ysum += rle_ptr[p1]->ysum;
     }
     else {
         rle_ptr[p2]->parent = p1;
         rle_ptr[p1]->rank++;
         rle_ptr[p1]->npixels += rle_ptr[p2]->npixels;
-        // std::cout << "pixels: " << rle_ptr[p1]->npixels;
+		rle_ptr[p1]->xi = min(rle_ptr[p1]->xi, rle_ptr[p2]->xi);
+		rle_ptr[p1]->xf = max(rle_ptr[p1]->xf, rle_ptr[p2]->xf);
+        rle_ptr[p1]->yi = min(rle_ptr[p1]->yi, rle_ptr[p2]->yi);
+		rle_ptr[p1]->yf = max(rle_ptr[p1]->yf, rle_ptr[p2]->yf);
+        rle_ptr[p1]->xsum += rle_ptr[p2]->xsum;
+		rle_ptr[p1]->ysum += rle_ptr[p2]->ysum;
     }
 }
 
@@ -108,8 +123,38 @@ void displayImage(unsigned char* img_ptr, int h, int w) {
     }
 }
 
-unordered_map<int, RLE*> ImageProcessor::calculateBlobs(int height, int width) {
+Blob makeBlob(RLE* r) {
+	Blob b;
+	b.xi = r->xi;
+	b.xf = r->xf;
+	b.yi = r->yi;
+	b.yf = r->yf;
+	b.dx = r->xf - r->xi + 1;
+	b.dy = r->yf - r->yi + 1;
+	b.color = r->color;
+	b.lpCount = r->npixels;
+	b.avgX = r->xsum / r->npixels;
+	b.avgY = r->ysum / r->npixels;
+	
+	return b;
+}
+
+vector<Blob> ImageProcessor::filterBlobs(uint8_t color, int size=0) {
+    vector<Blob> filtered;
+    for(int i = 0; i < detected_blobs.size(); ++i) {
+        if(detected_blobs[i].color != color)
+            continue;
+        if(detected_blobs[i].lpCount < size)
+            continue;
+        filtered.push_back(detected_blobs[i]);
+    }
+    return filtered;
+}
+
+void ImageProcessor::calculateBlobs() {
     // handle NULL case
+    int height = iparams_.height;
+    int width = iparams_.width;
 	int ystep = 1 << iparams_.defaultVerticalStepScale;
     int loc_idx = 0;
     unordered_map<int, RLE*> rle_ptr;
@@ -125,21 +170,14 @@ unordered_map<int, RLE*> ImageProcessor::calculateBlobs(int height, int width) {
         mergeEncodings(prev_encoding, encoding, rle_ptr);
         prev_encoding = encoding;
     }
-	vector<RLE*> blobs;
+    detected_blobs.clear();
     for(auto it = rle_ptr.begin(); it != rle_ptr.end(); ++it) {
         RLE* b = it->second;
-        if(b->parent != b->curr)
-          continue;
-        if(b->color != c_ORANGE)
-          continue;
-		blobs.push_back(b);
+        if(b->parent == b->curr) {
+			detected_blobs.push_back(makeBlob(b));
+		}
+		delete(b);
     }
-	sort(blobs.begin(), blobs.end(), RLECompare());
-	for(int i = 0; i < min((int)blobs.size(), 4); ++i) {
-		cout << blobs[i]->npixels << " ";
-	}
-	cout << endl;
-    return rle_ptr;
 }
 
 ImageProcessor::ImageProcessor(VisionBlocks& vblocks, const ImageParams& iparams, Camera::Type camera) :
@@ -260,17 +298,21 @@ void ImageProcessor::processFrame(){
   vblocks_.robot_vision->horizon = horizon;
   tlog(30, "Classifying Image: %i", camera_);
   if(!color_segmenter_->classifyImage(color_table_)) return;
+  calculateBlobs();
   detectBall();
   beacon_detector_->findBeacons();
 }
 
 void ImageProcessor::detectBall() {
-  if(getSegImg() == NULL)
-      return;
-  int imageX, imageY;
+  int imageX=-1, imageY=-1;
+  //cout << "X, Y: " << imageX << "," << imageY << endl;
   findBall(imageX, imageY);
-
+  //cout << "X, Y: " << imageX << "," << imageY << endl;
   WorldObject* ball = &vblocks_.world_object->objects_[WO_BALL];
+  if(imageX == -1 && imageY == -1){
+    ball->seen = false;
+    return;
+  }
 
   ball->imageCenterX = imageX;
   ball->imageCenterY = imageY;
@@ -280,22 +322,32 @@ void ImageProcessor::detectBall() {
   ball->visionElevation = cmatrix_.elevation(p);
   ball->visionDistance = cmatrix_.groundDistance(p);
 
+  cout << "Ball pan: " << ball->visionBearing << "   Ball tilt: " << ball->visionElevation << endl;
+  cout << "Ball distance: " << ball->visionDistance << endl << endl;
   ball->seen = true;
 
-  //unordered_map<int, RLE*> blobs = calculateBlobs(iparams_.height, iparams_.width);
-  //for(auto it = blobs.begin(); it != blobs.end(); ++it) {
-  // RLE* b = it->second;
-  //  if(b->parent != b->curr)
-  //   continue;
-  //  if(b->color != c_FIELD_GREEN)
-  //   continue;
-  //  // cout << "Orange: " << b->npixels << ", ";
-  //}
-  //cout << endl;
+
 }
 
 void ImageProcessor::findBall(int& imageX, int& imageY) {
-  imageX = imageY = 200;
+    if(getSegImg() == NULL){
+        imageX = -1;
+        imageY = -1;
+        cout << "Ball not detected" << endl;
+        return;
+    }
+    auto orangeBlobs = filterBlobs(c_ORANGE, 100);
+    sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
+    if(orangeBlobs.size() > 0) {
+        cout << "Ball detected at: " << orangeBlobs[0].avgX << "\t" << orangeBlobs[0].avgY << endl;
+        imageX = orangeBlobs[0].avgX;
+        imageY = orangeBlobs[0].avgY;
+    }
+    else {
+        imageX = -1;
+        imageY = -1;
+        cout << "Ball not detected" << endl;
+    }
 }
 
 

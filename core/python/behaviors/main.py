@@ -127,14 +127,42 @@ class Playing(StateMachine):
             # The rotation is always in steps of 10 degrees along both axes
             delta = 10
             thresh = 5 # if the ball is 5 pixels away, only then move
-            delta_pan = 0
-            delta_tilt = 0
+            delta_pan = 0.1
+            delta_tilt = 0.1
+            midX = 640
+            midY = 480
             if ball.seen:
+                ballX = ball.imageCenterX
+                ballY = ball.imageCenterY
+                print('ballY, midY: ', ballY, midY)
+                if abs(ballY - midY) > thresh:
+                    if ballY > midY:
+                        tilt = core.joint_values[core.HeadPitch] - delta_tilt
+                    else:
+                        tilt = core.joint_values[core.HeadPitch] + delta_tilt
+                    commands.setHeadTilt(tilt,
+                                        #tilt=tilt,
+                                        target_time=self.duration)
+                #print('ballX, midX: ', ballX, midX)
+                #if abs(ballX - midX) > thresh:
+                #    if ballX > midX:
+                #        pan = core.joint_values[core.HeadYaw] - delta_pan
+                #    else:
+                #        pan = core.joint_values[core.HeadYaw] + delta_pan
+                #    commands.setHeadPan(pan,
+                #                        #tilt=tilt,
+                #                        target_time=self.duration)
+                else:
+                    print('finish -- ballX, midX: ', ballX, midX)
+                    self.finish()
+
+
+                #tilt = core.joint_values[core.HeadPitch]
+                '''
                 pan = ball.visionBearing # radians
                 tilt = ball.visionElevation * core.RAD_T_DEG # radians -> degrees
-                commands.setHeadPanTilt(pan=pan,
-                                        tilt=tilt,
-                                        time=self.duration)
+                '''
+            # self.finish()
 
     def setup(self):
         stand = self.Stand()
@@ -144,7 +172,7 @@ class Playing(StateMachine):
         off = self.Off()
         readjoints = self.ReadJoints()
         readsensors = self.ReadPressureSensors()
-        lookatball = self.LookAtBall(3.0)
+        lookatball = self.LookAtBall(5.0)
 
         center = self.HeadPos(0, 0)
         center_2 = self.HeadPos(0, 0)
@@ -154,7 +182,7 @@ class Playing(StateMachine):
         down = self.HeadPos(0, -22, 4.0)
         # self.trans(readsensors, C, off, C)
         # self.trans(center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), off, C)
-        self.trans(center, T(2.0), stand, C, lookatball, T(3.0), center_2, T(2.0), sit, C, off)
+        self.trans(lookatball, C, off)
 
         # self.trans(stand, C, walkturn, T(5.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)
