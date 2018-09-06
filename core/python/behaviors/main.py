@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 from task import Task
 
+import math
 import time
 import core
 import pose
@@ -112,6 +113,29 @@ class Playing(StateMachine):
                 memory.speech.say("turned off stiffness")
                 self.finish()
 
+    class LookAtBall(Node):
+        def __init__(self, duration=3.0):
+            """
+            duration: time in seconds
+            """
+            super(Playing.LookAtBall, self).__init__()
+            self.duration = duration
+
+        def run(self):
+            """If the ball was seen, then move head towards the ball"""
+            ball = memory.world_objects.getObjPtr(core.WO_BALL)
+            # The rotation is always in steps of 10 degrees along both axes
+            delta = 10
+            thresh = 5 # if the ball is 5 pixels away, only then move
+            delta_pan = 0
+            delta_tilt = 0
+            if ball.seen:
+                pan = ball.visionBearing # radians
+                tilt = ball.visionElevation * core.RAD_T_DEG # radians -> degrees
+                commands.setHeadPanTilt(pan=pan,
+                                        tilt=tilt,
+                                        time=self.duration)
+
     def setup(self):
         stand = self.Stand()
         walk = self.Walk()
@@ -120,16 +144,16 @@ class Playing(StateMachine):
         off = self.Off()
         readjoints = self.ReadJoints()
         readsensors = self.ReadPressureSensors()
+        lookatball = self.LookAtBall(3.0)
 
         center = self.HeadPos(0, 0)
         left = self.HeadPos(22, 0)
         right = self.HeadPos(-22, 0)
         up = self.HeadPos(0, 22, 4.0)
         down = self.HeadPos(0, -22, 4.0)
-
         # self.trans(readsensors, C, off, C)
         # self.trans(center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), off, C)
-        self.trans(stand, C, walkturn, T(5.0), sit, C, off)
+        self.trans(center, T(2.0), lookatball, T(3.0), off)
+
+        # self.trans(stand, C, walkturn, T(5.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)
-
-
