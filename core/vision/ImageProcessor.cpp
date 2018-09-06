@@ -4,28 +4,32 @@
 #include <vision/Logging.h>
 #include <iostream>
 
-vector<RLE*> getRLERow(unsigned char* img_ptr, int y, int width, int &start_idx) {
+vector<RLE*> ImageProcessor::getRLERow(int y, int width, int &start_idx) {
     // handle NULL case
-    auto prev_color = img_ptr[y * width];
-    auto prev_idx = 0;
+	int xstep = 1 << iparams_.defaultHorizontalStepScale;
+    auto prev_color = getSegImg()[y * width];
+	auto prev_idx = 0;
     vector<RLE*> encoding;
-    for(int x = 0; x < width; ++x) {
-        auto c = img_ptr[y * width + x];
+    for(int x = 0; x < width; x += xstep) {
+        auto c = getSegImg()[y * width + x];
         if(c == prev_color)
             continue;
         else {
             encoding.push_back(new RLE(prev_idx, x - 1, start_idx, prev_color));
-            start_idx++;
+            //cout << x - prev_idx << "," << (int) prev_color << " ";
+			start_idx++;
             prev_color = c;
             prev_idx = x;
         }
     }
     encoding.push_back(new RLE(prev_idx, width - 1, start_idx, prev_color));
+    //cout << width - prev_idx << "," << (int) prev_color << " ";
+	//cout << endl;
     start_idx++;
     return encoding;
 }
 
-int getParent(int idx, unordered_map<int, RLE*> &rle_ptr) {
+int ImageProcessor::getParent(int idx, unordered_map<int, RLE*> &rle_ptr) {
     if(rle_ptr.find(idx) == rle_ptr.end())
         return -1;
     if(rle_ptr[idx]->parent == rle_ptr[idx]->curr)
@@ -36,7 +40,7 @@ int getParent(int idx, unordered_map<int, RLE*> &rle_ptr) {
     return p;
 }
 
-void mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rle_ptr) {
+void ImageProcessor::mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rle_ptr) {
     int p1 = getParent(idx1, rle_ptr);
     int p2 = getParent(idx2, rle_ptr);
     if(p1 == -1 || p2 == -1) {
@@ -66,7 +70,7 @@ void mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rle_ptr) {
     }
 }
 
-void mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding, unordered_map<int, RLE*> &rle_ptr) {
+void ImageProcessor::mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding, unordered_map<int, RLE*> &rle_ptr) {
     if(prev_encoding.size() == 0 || encoding.size() == 0)
         return;
     int i = 0, j = 0;
@@ -104,17 +108,15 @@ void displayImage(unsigned char* img_ptr, int h, int w) {
     }
 }
 
-unordered_map<int, RLE*> calculateBlobs(unsigned char* img_ptr, int height, int width) {
+unordered_map<int, RLE*> ImageProcessor::calculateBlobs(int height, int width) {
     // handle NULL case
+	int ystep = 1 << iparams_.defaultVerticalStepScale;
     int loc_idx = 0;
     unordered_map<int, RLE*> rle_ptr;
     vector<RLE*> prev_encoding;
 
-    if(img_ptr == NULL)
-        return rle_ptr;
-
-    for(int y = 0; y < height; y++) {
-        auto encoding = getRLERow(img_ptr, y, width, loc_idx);
+    for(int y = 0; y < height; y += ystep) {
+        auto encoding = getRLERow(y, width, loc_idx);
         // initialising the hash table with RLE pointers
         for(int i = 0; i < encoding.size(); ++i) {
             assert(rle_ptr.find(encoding[i]->curr) == rle_ptr.end());
@@ -123,16 +125,23 @@ unordered_map<int, RLE*> calculateBlobs(unsigned char* img_ptr, int height, int 
         mergeEncodings(prev_encoding, encoding, rle_ptr);
         prev_encoding = encoding;
     }
+	vector<RLE*> blobs;
     for(auto it = rle_ptr.begin(); it != rle_ptr.end(); ++it) {
         RLE* b = it->second;
         if(b->parent != b->curr)
           continue;
-        if(b->color != c_FIELD_GREEN)
+        if(b->color != c_ORANGE)
           continue;
-        cout << "Green: " << b->npixels << ", ";
+		blobs.push_back(b);
     }
+	sort(blobs.begin(), blobs.end(), RLECompare());
+	for(int i = 0; i < min((int)blobs.size(), 4); ++i) {
+		cout << blobs[i]->npixels << " ";
+	}
+	cout << endl;
     return rle_ptr;
 }
+
 ImageProcessor::ImageProcessor(VisionBlocks& vblocks, const ImageParams& iparams, Camera::Type camera) :
   vblocks_(vblocks), iparams_(iparams), camera_(camera), cmatrix_(iparams_, camera)
 {
@@ -256,15 +265,17 @@ void ImageProcessor::processFrame(){
 }
 
 void ImageProcessor::detectBall() {
-  unordered_map<int, RLE*> blobs = calculateBlobs(getSegImg(), iparams_.height, iparams_.width);
+if(getSegImg() == NULL)
+return;
+  unordered_map<int, RLE*> blobs = calculateBlobs(iparams_.height, iparams_.width);
   for(auto it = blobs.begin(); it != blobs.end(); ++it) {
-    RLE* b = it->second;
+   RLE* b = it->second;
     if(b->parent != b->curr)
-      continue;
+     continue;
     if(b->color != c_FIELD_GREEN)
-      continue;
-    cout << "Orange: " << b->npixels << ", ";
-  }
+     continue;
+    // cout << "Orange: " << b->npixels << ", ";
+ }
   cout << endl;
 }
 

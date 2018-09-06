@@ -39,15 +39,12 @@ struct RLE {
     }
 };
 
-//vector<RLE*> getRLERow(unsigned char* img_ptr, int width, int &start_idx); 
-//
-//int getParent(int idx, unordered_map<int, RLE*> &rle_ptr); 
-//
-//void mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rle_ptr); 
-//
-//void mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding, unordered_map<int, RLE*> &rle_ptr); 
-//
-//unordered_map<int, RLE*> calculateBlobs(unsigned char* img_ptr, int height, int width); 
+struct RLECompare {
+	bool operator()(RLE* a, RLE* b) {
+		return a->npixels > b->npixels;
+	}
+};
+
 
 /// @ingroup vision
 class ImageProcessor {
@@ -74,6 +71,11 @@ class ImageProcessor {
     std::vector<BallCandidate*> getBallCandidates();
     BallCandidate* getBestBallCandidate();
     bool isImageLoaded();
+	vector<RLE*> getRLERow(int y, int width, int &start_idx); 
+	void mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rle_ptr); 
+	int getParent(int idx, unordered_map<int, RLE*> &rle_ptr); 
+	void mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding, unordered_map<int, RLE*> &rle_ptr); 
+	unordered_map<int, RLE*> calculateBlobs(int height, int width); 
     void detectBall();
     void findBall(int& imageX, int& imageY);
   private:
