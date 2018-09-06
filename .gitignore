@@ -21,3 +21,6 @@ logs*
 *.o
 *.pyo
 *.pyc
+bin/
+build/
+lib/
