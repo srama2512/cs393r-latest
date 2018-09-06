@@ -127,6 +127,16 @@ void ImageProcessor::processFrame(){
 }
 
 void ImageProcessor::detectBall() {
+  unordered_map<int, RLE*> blobs = calculateBlobs(getSegImg(), iparams_.height, iparams_.width);
+  for(auto it = blobs.begin(); it != blobs.end(); ++it) {
+    RLE* b = it->second;
+    if(b->parent != b->curr)
+      continue;
+    if(b->color != c_ORANGE)
+      continue;
+    cout << "Orange: " << b->npixels << ", ";
+  }
+  cout << endl;
 }
 
 void ImageProcessor::findBall(int& imageX, int& imageY) {
