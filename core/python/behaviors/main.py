@@ -86,6 +86,10 @@ class Playing(StateMachine):
         def run(self):
             commands.setWalkVelocity(0.5, 0, 0)
 
+    class WalkTurn(Node):
+        def run(self):
+            commands.setWalkVelocity(0.5, 0, -0.6)
+
     class HeadPos(Node):
         """Changes the head pos to the desired pan and tilt"""
         def __init__(self, pan=0, tilt=0, duration=2.0):
@@ -97,8 +101,7 @@ class Playing(StateMachine):
             super(Playing.HeadPos, self).__init__()
             self.pan = pan * core.DEG_T_RAD
             self.tilt = tilt
-            self.duration = duration
-        
+            self.duration = duration 
         def run(self):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
     
@@ -112,6 +115,7 @@ class Playing(StateMachine):
     def setup(self):
         stand = self.Stand()
         walk = self.Walk()
+        walkturn = self.WalkTurn()
         sit = pose.Sit()
         off = self.Off()
         readjoints = self.ReadJoints()
@@ -123,7 +127,9 @@ class Playing(StateMachine):
         up = self.HeadPos(0, 22, 4.0)
         down = self.HeadPos(0, -22, 4.0)
 
-        self.trans(readsensors, C, off, C)
-        # self.trans(center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, off, C)
+        # self.trans(readsensors, C, off, C)
+        # self.trans(center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), off, C)
+        self.trans(stand, C, walkturn, T(5.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)
+
 
