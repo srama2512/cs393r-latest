@@ -82,10 +82,10 @@ class ImageProcessor {
     std::vector<BallCandidate*> getBallCandidates();
     BallCandidate* getBestBallCandidate();
     bool isImageLoaded();
+    int getParent(int idx); 
+    void mergeBlobs(int idx1, int idx2); 
 	vector<RLE*> getRLERow(int y, int width, int &start_idx); 
-	void mergeBlobs(int idx1, int idx2, unordered_map<int, RLE*> &rle_ptr); 
-	int getParent(int idx, unordered_map<int, RLE*> &rle_ptr); 
-	void mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding, unordered_map<int, RLE*> &rle_ptr); 
+	void mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding); 
 	void calculateBlobs(); 
     vector<Blob> filterBlobs(uint8_t color, int size);
     void detectBall();
@@ -115,6 +115,7 @@ class ImageProcessor {
     int bottomFrameCounter_ = 0;
     
     // blob store
+    unordered_map<int, RLE*> rle_ptr;
     vector<Blob> detected_blobs;
 };
 

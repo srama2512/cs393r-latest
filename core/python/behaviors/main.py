@@ -120,49 +120,46 @@ class Playing(StateMachine):
             """
             super(Playing.LookAtBall, self).__init__()
             self.duration = duration
+            self.thresh = 5 # if the ball is 5 pixels away, only then move
+            self.delta_pan = 3 * core.DEG_T_RAD
+            self.delta_tilt = 3 * core.DEG_T_RAD
+            self.midX = 640
+            self.midY = 480
+            self.ball_seen = False
 
         def run(self):
             """If the ball was seen, then move head towards the ball"""
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
-            # The rotation is always in steps of 10 degrees along both axes
-            delta = 10
-            thresh = 5 # if the ball is 5 pixels away, only then move
-            delta_pan = 0.1
-            delta_tilt = 0.1
-            midX = 640
-            midY = 480
+
+            # if self.ball_seen != ball.seen:
+            #     if ball.seen:
+            #         core.ledsC.allRightEye(1, 1, 1)
+            #     else:
+            #         core.ledsC.allRightEye(0, 0, 0)
+            #     self.ball_seen = ball.seen
+
             if ball.seen:
                 ballX = ball.imageCenterX
                 ballY = ball.imageCenterY
-                print('ballY, midY: ', ballY, midY)
-                if abs(ballY - midY) > thresh:
-                    if ballY > midY:
-                        tilt = core.joint_values[core.HeadPitch] - delta_tilt
+                print('vertY: ', ballY - self.midY)
+                if abs(ballY - self.midY) > self.thresh:
+                    if ballY > self.midY:
+                        tilt = core.joint_values[core.HeadPitch] - self.delta_tilt
                     else:
-                        tilt = core.joint_values[core.HeadPitch] + delta_tilt
-                    commands.setHeadTilt(tilt,
-                                        #tilt=tilt,
-                                        target_time=self.duration)
-                #print('ballX, midX: ', ballX, midX)
-                #if abs(ballX - midX) > thresh:
-                #    if ballX > midX:
-                #        pan = core.joint_values[core.HeadYaw] - delta_pan
-                #    else:
-                #        pan = core.joint_values[core.HeadYaw] + delta_pan
-                #    commands.setHeadPan(pan,
-                #                        #tilt=tilt,
-                #                        target_time=self.duration)
-                else:
-                    print('finish -- ballX, midX: ', ballX, midX)
-                    self.finish()
-
-
-                #tilt = core.joint_values[core.HeadPitch]
-                '''
-                pan = ball.visionBearing # radians
-                tilt = ball.visionElevation * core.RAD_T_DEG # radians -> degrees
-                '''
-            # self.finish()
+                        tilt = core.joint_values[core.HeadPitch] + self.delta_tilt
+                    commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration * 3)
+                
+                print('vertX: ', ballX - self.midX)
+                if abs(ballX - self.midX) > self.thresh:
+                   if ballX > self.midX:
+                       pan = core.joint_values[core.HeadYaw] - self.delta_pan
+                   else:
+                       pan = core.joint_values[core.HeadYaw] + self.delta_pan
+                   commands.setHeadPan(pan, target_time=self.duration)
+                
+                # elif abs(ballY - self.midY) < self.thresh and abs(ballX - self.midX) < self.thresh:
+                #     print('finish -- ballX, midX: ', ballX, self.midX)
+                #     self.finish()
 
     def setup(self):
         stand = self.Stand()
@@ -172,7 +169,7 @@ class Playing(StateMachine):
         off = self.Off()
         readjoints = self.ReadJoints()
         readsensors = self.ReadPressureSensors()
-        lookatball = self.LookAtBall(5.0)
+        lookatball = self.LookAtBall(0.1)
 
         center = self.HeadPos(0, 0)
         center_2 = self.HeadPos(0, 0)
