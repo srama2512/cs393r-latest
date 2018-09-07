@@ -290,6 +290,7 @@ void ImageProcessor::processFrame(){
   if(!color_segmenter_->classifyImage(color_table_)) return;
   calculateBlobs();
   detectBall();
+  detectGoal();
   beacon_detector_->findBeacons();
 }
 
@@ -337,6 +338,49 @@ void ImageProcessor::findBall(int& imageX, int& imageY) {
     }
 }
 
+void ImageProcessor::detectGoal() {
+    int imageX = -1, imageY = -1;
+    findGoal(imageX, imageY);
+
+    WorldObject* goal = &vblocks_.world_object->objects_[WO_OPP_GOAL];
+    if(imageX == -1 && imageY == -1){
+        goal->seen = false;
+        return;
+    }
+
+    goal->imageCenterX = imageX;
+    goal->imageCenterY = imageY;
+
+    Position p = cmatrix_.getWorldPosition(imageX, imageY);
+    goal->visionBearing = cmatrix_.bearing(p);
+    goal->visionElevation = cmatrix_.elevation(p);
+    goal->visionDistance = cmatrix_.groundDistance(p);
+
+    cout << "Goal pan: " << goal->visionBearing << "   Goal tilt: " << goal->visionElevation << endl;
+    cout << "Goal distance: " << goal->visionDistance << endl << endl;
+    goal->seen = true;
+}
+
+void ImageProcessor::findGoal(int& imageX, int& imageY) {
+    if(getSegImg() == NULL){
+        imageX = -1;
+        imageY = -1;
+        cout << "Goal not detected" << endl;
+        return;
+    }
+    auto blueBlobs = filterBlobs(c_BLUE, 2000);
+    sort(blueBlobs.begin(), blueBlobs.end(), BlobCompare);
+    if(blueBlobs.size() > 0) {
+        cout << "Goal detected at: " << blueBlobs[0].avgX << "\t" << blueBlobs[0].yf << endl;
+        imageX = blueBlobs[0].avgX;
+        imageY = blueBlobs[0].yf;
+    }
+    else {
+        imageX = -1;
+        imageY = -1;
+        cout << "Goal not detected" << endl;
+    }
+}
 
 int ImageProcessor::getTeamColor() {
   return vblocks_.robot_state->team_;

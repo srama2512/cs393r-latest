@@ -124,9 +124,9 @@ class Playing(StateMachine):
             """
             super(Playing.LookAtBall, self).__init__()
             self.duration = duration
-            self.thresh = 5 # if the ball is 5 pixels away, only then move
-            self.delta_pan = 3 * core.DEG_T_RAD
-            self.delta_tilt = 3 * core.DEG_T_RAD
+            self.thresh = 20 # if the ball is 5 pixels away, only then move
+            self.delta_pan = 6 * core.DEG_T_RAD
+            self.delta_tilt = 10 * core.DEG_T_RAD
             self.midX = 640
             self.midY = 480
             self.ball_seen = False
@@ -151,7 +151,7 @@ class Playing(StateMachine):
                         tilt = core.joint_values[core.HeadPitch] - self.delta_tilt
                     else:
                         tilt = core.joint_values[core.HeadPitch] + self.delta_tilt
-                    commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration * 3)
+                    commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration)
                 
                 print('vertX: ', ballX - self.midX)
                 if abs(ballX - self.midX) > self.thresh:
@@ -162,7 +162,7 @@ class Playing(StateMachine):
                    commands.setHeadPan(pan, target_time=self.duration)
 
     class MaintainDistance(Node):
-        def __init__(self):
+        def __init__(self, object_type=core.WO_BALL):
             super(Playing.MaintainDistance, self).__init__()
 
             self.minDist = 750
@@ -171,10 +171,11 @@ class Playing(StateMachine):
             self.midY = 480
             self.thresh = 10
             self.turn_angle = 0.1
+            self.object_type = object_type
 
         def run(self):
             """If the ball was seen, then move head towards the ball"""
-            ball = memory.world_objects.getObjPtr(core.WO_BALL)
+            ball = memory.world_objects.getObjPtr(self.object_type)
             angle = 0.0
 
             if ball.seen:
@@ -209,21 +210,21 @@ class Playing(StateMachine):
         off = self.Off()
         readjoints = self.ReadJoints()
         readsensors = self.ReadPressureSensors()
-        lookatball = self.LookAtBall(0.1)
+        lookatball = self.LookAtBall(0.5)
 
-        maintaindist = self.MaintainDistance()
+        maintaindist = self.MaintainDistance(object_type=core.WO_OPP_GOAL)
 
         center = self.HeadPos(0, 0)
-        center_2 = self.HeadPos(0, 0)
         left = self.HeadPos(22, 0)
         right = self.HeadPos(-22, 0)
         up = self.HeadPos(0, 22, 4.0)
         down = self.HeadPos(0, -22, 4.0)
-        # self.trans(readsensors, C, off, C)
-        # self.trans(center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), off, C)
-        # self.trans(lookatball, C, off)
-        # self.trans(stand, C, walkcurve, T(10.0), sit, C, off)
-        self.trans(stand, C, maintaindist, C, sit, C, off)
+        
+        # self.trans(stand, C, readsensors, C, readjoints, C, off, C)
+        # self.trans(stand, C, center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), sit, C, off)
+        # self.trans(stand, C, lookatball, C, sit, C, off)
+        # self.trans(stand, C, walk, T(5.0), walkturn, T(5.0), walkcurve, T(10.0), sit, C, off)
+        self.trans(stand, C, down, T(2.0), maintaindist, C, sit, C, off)
 
         # self.trans(stand, C, walkturn, T(5.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)

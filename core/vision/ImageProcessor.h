@@ -90,6 +90,8 @@ class ImageProcessor {
     vector<Blob> filterBlobs(uint8_t color, int size);
     void detectBall();
     void findBall(int& imageX, int& imageY);
+    void detectGoal();
+    void findGoal(int& imageX, int& imageY);
   private:
     int getTeamColor();
     double getCurrentTime();
