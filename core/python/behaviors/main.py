@@ -89,7 +89,11 @@ class Playing(StateMachine):
 
     class WalkTurn(Node):
         def run(self):
-            commands.setWalkVelocity(0.5, 0, -0.6)
+            commands.setWalkVelocity(0.0, 0, -0.6)
+
+    class WalkCurve(Node):
+        def run(self):
+            commands.setWalkVelocity(0.5, 0.0, 0.2)
 
     class HeadPos(Node):
         """Changes the head pos to the desired pan and tilt"""
@@ -156,20 +160,58 @@ class Playing(StateMachine):
                    else:
                        pan = core.joint_values[core.HeadYaw] + self.delta_pan
                    commands.setHeadPan(pan, target_time=self.duration)
+
+    class MaintainDistance(Node):
+        def __init__(self):
+            super(Playing.MaintainDistance, self).__init__()
+
+            self.minDist = 750
+            self.maxDist = 1000
+            self.midX = 640
+            self.midY = 480
+            self.thresh = 10
+            self.turn_angle = 0.1
+
+        def run(self):
+            """If the ball was seen, then move head towards the ball"""
+            ball = memory.world_objects.getObjPtr(core.WO_BALL)
+            angle = 0.0
+
+            if ball.seen:
+
+                ballX = ball.imageCenterX
+                ballY = ball.imageCenterY
+
+                if abs(ballX - self.midX) > self.thresh:
+                   if ballX > self.midX:
+                        angle = -1 * self.turn_angle
+                   else:
+                        angle = self.turn_angle
+
+                ball_dist = ball.visionDistance
                 
-                # elif abs(ballY - self.midY) < self.thresh and abs(ballX - self.midX) < self.thresh:
-                #     print('finish -- ballX, midX: ', ballX, self.midX)
-                #     self.finish()
+                if ball_dist < self.minDist:
+                   commands.setWalkVelocity(-0.3, 0.0, angle)
+
+                elif ball_dist > self.maxDist:
+                    commands.setWalkVelocity(0.3, 0.0, angle)
+
+                else:
+                    commands.setWalkVelocity(0.0, 0.0, 0.0)
+                
 
     def setup(self):
         stand = self.Stand()
         walk = self.Walk()
         walkturn = self.WalkTurn()
+        walkcurve = self.WalkCurve()
         sit = pose.Sit()
         off = self.Off()
         readjoints = self.ReadJoints()
         readsensors = self.ReadPressureSensors()
         lookatball = self.LookAtBall(0.1)
+
+        maintaindist = self.MaintainDistance()
 
         center = self.HeadPos(0, 0)
         center_2 = self.HeadPos(0, 0)
@@ -179,7 +221,9 @@ class Playing(StateMachine):
         down = self.HeadPos(0, -22, 4.0)
         # self.trans(readsensors, C, off, C)
         # self.trans(center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), off, C)
-        self.trans(lookatball, C, off)
+        # self.trans(lookatball, C, off)
+        # self.trans(stand, C, walkcurve, T(10.0), sit, C, off)
+        self.trans(stand, C, maintaindist, C, sit, C, off)
 
         # self.trans(stand, C, walkturn, T(5.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)
