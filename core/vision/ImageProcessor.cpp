@@ -411,4 +411,3 @@ void ImageProcessor::enableCalibration(bool value) {
 bool ImageProcessor::isImageLoaded() {
   return vblocks_.image->isLoaded();
 }
-
