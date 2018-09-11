@@ -119,6 +119,9 @@ class ImageProcessor {
     // blob store
     unordered_map<int, RLE*> rle_ptr;
     vector<Blob> detected_blobs;
+
+    // Ball detection
+    vector<BallCandidate*> ball_candidates;
 };
 
 #endif

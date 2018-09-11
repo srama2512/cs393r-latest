@@ -6,8 +6,8 @@ ImageParams::ImageParams() { }
 
 ImageParams::ImageParams(Camera::Type camera) {
   if(camera == Camera::TOP) {
-    width = 320;
-    height = 240;
+    width = 1280;
+    height = 960;
     defaultHorizontalStepScale = 3;
     defaultVerticalStepScale = 2;
   }

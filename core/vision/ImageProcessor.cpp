@@ -290,52 +290,41 @@ void ImageProcessor::processFrame(){
   if(!color_segmenter_->classifyImage(color_table_)) return;
   calculateBlobs();
   detectBall();
-  detectGoal();
+  // detectGoal();
   beacon_detector_->findBeacons();
 }
 
 void ImageProcessor::detectBall() {
-  int imageX = -1, imageY = -1;
-  findBall(imageX, imageY);
+    BallCandidate* ballc = getBestBallCandidate();
+    WorldObject* ball = &vblocks_.world_object->objects_[WO_BALL];
 
-  WorldObject* ball = &vblocks_.world_object->objects_[WO_BALL];
-  if(imageX == -1 && imageY == -1){
-    ball->seen = false;
-    return;
-  }
+    if(ballc == NULL){
+        // cout << "Ball not detected" << endl;
+        ball->seen = false;
+        return;
+    }
 
-  ball->imageCenterX = imageX;
-  ball->imageCenterY = imageY;
+    ball->imageCenterX = ballc->centerX;
+    ball->imageCenterY = ballc->centerY;
+    ball->radius = ballc->radius;
 
-  Position p = cmatrix_.getWorldPosition(imageX, imageY);
-  ball->visionBearing = cmatrix_.bearing(p);
-  ball->visionElevation = cmatrix_.elevation(p);
-  ball->visionDistance = cmatrix_.groundDistance(p);
+    Position p = cmatrix_.getWorldPosition(ballc->centerX, ballc->centerY);
+    ball->visionBearing = cmatrix_.bearing(p);
+    ball->visionElevation = cmatrix_.elevation(p);
+    ball->visionDistance = cmatrix_.groundDistance(p);
 
-  cout << "Ball pan: " << ball->visionBearing << "   Ball tilt: " << ball->visionElevation << endl;
-  cout << "Ball distance: " << ball->visionDistance << endl << endl;
-  ball->seen = true;
+    // cout << "Ball detected at: " << ballc->centerX << "," << ballc->centerY << endl;
+    // cout << "Ball pan: " << ball->visionBearing << "   Ball tilt: " << ball->visionElevation << endl;
+    // cout << "Ball distance: " << ball->visionDistance << endl << endl;
+    ball->seen = true;
+
+    if(camera_ == Camera::BOTTOM)
+        ball->fromTopCamera = false;
+    else
+        ball->fromTopCamera = true;
 }
 
 void ImageProcessor::findBall(int& imageX, int& imageY) {
-    if(getSegImg() == NULL){
-        imageX = -1;
-        imageY = -1;
-        cout << "Ball not detected" << endl;
-        return;
-    }
-    auto orangeBlobs = filterBlobs(c_ORANGE, 100);
-    sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
-    if(orangeBlobs.size() > 0) {
-        cout << "Ball detected at: " << orangeBlobs[0].avgX << "\t" << orangeBlobs[0].avgY << endl;
-        imageX = orangeBlobs[0].avgX;
-        imageY = orangeBlobs[0].avgY;
-    }
-    else {
-        imageX = -1;
-        imageY = -1;
-        cout << "Ball not detected" << endl;
-    }
 }
 
 void ImageProcessor::detectGoal() {
@@ -397,11 +386,43 @@ float ImageProcessor::getHeadChange() const {
 }
 
 std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
-  return std::vector<BallCandidate*>();
+    for(int i = 0; i < ball_candidates.size(); ++i) {
+        delete(ball_candidates[i]);
+    }
+    ball_candidates.clear();
+
+    if(getSegImg() == NULL){
+        return ball_candidates;
+    }
+
+    auto orangeBlobs = filterBlobs(c_ORANGE, 100);
+    sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
+    for(int i = 0; i < orangeBlobs.size(); ++i) {
+        BallCandidate* ballc = new BallCandidate();
+        ballc->centerX = orangeBlobs[i].avgX;
+        ballc->centerY = orangeBlobs[i].avgY;
+        ballc->radius = (orangeBlobs[i].dx + orangeBlobs[i].dy) / 4;
+        ballc->width = orangeBlobs[i].dx;
+        ballc->height = orangeBlobs[i].dy;
+
+        Position p = cmatrix_.getWorldPosition(ballc->centerX, ballc->centerY);
+        ballc->groundDistance = cmatrix_.groundDistance(p);
+        // [TODO] add the confidence value for ball candidates
+        ballc->confidence = 0.0;
+        // [TODO] add the blob on the heap and send
+        ballc->blob = NULL;
+        ballc->valid = true;
+        // [TODO] add the absolute and relative positions
+        ball_candidates.push_back(ballc);
+    }
+    return ball_candidates;
 }
 
 BallCandidate* ImageProcessor::getBestBallCandidate() {
-  return NULL;
+    getBallCandidates();
+    if(ball_candidates.size() == 0)
+        return NULL;
+    return ball_candidates[0];
 }
 
 void ImageProcessor::enableCalibration(bool value) {

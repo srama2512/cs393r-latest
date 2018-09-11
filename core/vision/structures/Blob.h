@@ -8,6 +8,7 @@
 /// @ingroup vision
 struct Blob {
   uint16_t xi, xf, dx, yi, yf, dy;
+  // added for assignment 1
   uint8_t color;
   uint16_t lpCount;
   std::vector<uint32_t> lpIndex;
