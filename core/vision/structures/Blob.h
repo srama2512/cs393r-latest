@@ -2,6 +2,7 @@
 #define BLOB_H
 
 #include <vision/VisionConstants.h>
+#include <vision/enums/Colors.h>
 #include <vector>
 #include <inttypes.h>
 
@@ -9,7 +10,7 @@
 struct Blob {
   uint16_t xi, xf, dx, yi, yf, dy;
   // added for assignment 1
-  uint8_t color;
+  Color color;
   uint16_t lpCount;
   std::vector<uint32_t> lpIndex;
   float diffStart;
@@ -33,5 +34,6 @@ struct Blob {
 /// @ingroup vision
 bool sortBlobAreaPredicate(Blob* left, Blob* right);
 bool BlobCompare(Blob a, Blob b);
+vector<Blob> filterBlobs(vector<Blob> &blobs, Color color, int size);
 
 #endif
