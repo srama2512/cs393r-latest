@@ -119,24 +119,12 @@ Blob makeBlob(RLE* r) {
     b.yf = r->yf;
     b.dx = r->xf - r->xi + 1;
     b.dy = r->yf - r->yi + 1;
-    b.color = r->color;
+    b.color = static_cast<Color>(r->color);
     b.lpCount = r->npixels;
     b.avgX = r->xsum / r->npixels;
     b.avgY = r->ysum / r->npixels;
     
     return b;
-}
-
-vector<Blob> ImageProcessor::filterBlobs(uint8_t color, int size=0) {
-    vector<Blob> filtered;
-    for(int i = 0; i < detected_blobs.size(); ++i) {
-        if(detected_blobs[i].color != color)
-            continue;
-        if(detected_blobs[i].lpCount < size)
-            continue;
-        filtered.push_back(detected_blobs[i]);
-    }
-    return filtered;
 }
 
 void ImageProcessor::calculateBlobs() {
@@ -292,7 +280,8 @@ void ImageProcessor::processFrame(){
   calculateBlobs();
   detectBall();
   // detectGoal();
-  beacon_detector_->findBeacons();
+
+  beacon_detector_->findBeacons(detected_blobs);
 }
 
 void ImageProcessor::detectBall() {
@@ -358,7 +347,7 @@ void ImageProcessor::findGoal(int& imageX, int& imageY) {
         cout << "Goal not detected" << endl;
         return;
     }
-    auto blueBlobs = filterBlobs(c_BLUE, 2000);
+    auto blueBlobs = filterBlobs(detected_blobs, c_BLUE, 2000);
     sort(blueBlobs.begin(), blueBlobs.end(), BlobCompare);
     if(blueBlobs.size() > 0) {
         cout << "Goal detected at: " << blueBlobs[0].avgX << "\t" << blueBlobs[0].yf << endl;
@@ -396,7 +385,7 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
         return ball_candidates;
     }
 
-    auto orangeBlobs = filterBlobs(c_ORANGE, 100);
+    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 100);
     sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
     for(int i = 0; i < orangeBlobs.size(); ++i) {
         int xstep = 1 << iparams_.defaultHorizontalStepScale;
