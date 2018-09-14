@@ -280,7 +280,7 @@ void ImageProcessor::processFrame(){
   if(!color_segmenter_->classifyImage(color_table_)) return;
   calculateBlobs();
   detectBall();
-  // detectGoal();
+  detectGoal();
 
   beacon_detector_->findBeacons(detected_blobs);
 }
@@ -335,11 +335,13 @@ void ImageProcessor::detectGoal() {
     goal->visionBearing = cmatrix_.bearing(p);
     goal->visionElevation = cmatrix_.elevation(p);
     goal->visionDistance = cmatrix_.groundDistance(p);
+    goal->fromTopCamera = (camera_ == Camera::TOP);
 
     cout << "Goal pan: " << goal->visionBearing << "   Goal tilt: " << goal->visionElevation << endl;
     cout << "Goal distance: " << goal->visionDistance << endl << endl;
     goal->seen = true;
 }
+
 
 void ImageProcessor::findGoal(int& imageX, int& imageY) {
     if(getSegImg() == NULL){
