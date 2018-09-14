@@ -35,5 +35,7 @@ struct Blob {
 bool sortBlobAreaPredicate(Blob* left, Blob* right);
 bool BlobCompare(Blob a, Blob b);
 vector<Blob> filterBlobs(vector<Blob> &blobs, Color color, int size);
+double calculateBlobAspectRatio(const Blob &b);
+double calculateBlobArea(const Blob &b);
 
 #endif

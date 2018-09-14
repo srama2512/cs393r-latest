@@ -19,3 +19,11 @@ vector<Blob> filterBlobs(vector<Blob> &blobs, Color color, int size=0) {
     }
     return filtered;
 }
+
+double calculateBlobAspectRatio(const Blob &b) {
+    return (double) b.dx / (double) b.dy;
+}
+
+double calculateBlobArea(const Blob &b) {
+    return b.dx * b.dy;
+}

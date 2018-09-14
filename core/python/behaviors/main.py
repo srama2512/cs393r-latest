@@ -222,11 +222,12 @@ class Playing(StateMachine):
         up = self.HeadPos(0, 22, 4.0)
         down = self.HeadPos(0, -22, 4.0)
         
+        self.trans(sit, C, center, T(2.0))
         # self.trans(stand, C, readsensors, C, readjoints, C, off, C)
         # self.trans(stand, C, center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), sit, C, off)
         # self.trans(stand, C, lookatball, C, sit, C, off)
         # self.trans(stand, C, walk, T(5.0), walkturn, T(5.0), walkcurve, T(10.0), sit, C, off)
-        self.trans(stand, C, down, T(2.0), maintaindist, C, sit, C, off)
+        # self.trans(stand, C, down, T(2.0), maintaindist, C, sit, C, off)
 
         # self.trans(stand, C, walkturn, T(5.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)
