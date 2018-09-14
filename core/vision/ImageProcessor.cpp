@@ -386,11 +386,11 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
         return ball_candidates;
     }
 
-    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 100);
+    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 50);
     sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
     for(int i = 0; i < orangeBlobs.size(); ++i) {
-        int xstep = 1 << iparams_.defaultHorizontalStepScale;
-        int ystep = 1 << iparams_.defaultVerticalStepScale;
+        // int xstep = 1 << iparams_.defaultHorizontalStepScale;
+        // int ystep = 1 << iparams_.defaultVerticalStepScale;
         // std::cout << "xstep " << xstep << endl;
         // std::cout << "ystep " << ystep << endl;
         // heuristics to filter out spurious balls
@@ -401,7 +401,7 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
 
         float sideRatio = float(orangeBlobs[i].dx) / (orangeBlobs[i].dy);
         // cout << sideRatio << endl;
-        if (sideRatio < 0.5 || sideRatio > 2.0) {
+        if (sideRatio < 0.8 || sideRatio > 1.25) {
           // std::cout << "Skipping due to side ratio: " << i << " " << sideRatio << endl;
           // cout << "skipping" << endl;
           continue;
@@ -409,7 +409,7 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
 
         // area ratio
         float rectArea = (orangeBlobs[i].dx) * (orangeBlobs[i].dy);
-        float areaRatio = (orangeBlobs[i].lpCount * ystep / rectArea) / (M_PI / 4.0);
+        float areaRatio = (orangeBlobs[i].lpCount / rectArea) / (M_PI / 4.0);
         // cout << areaRatio << endl;
         if (areaRatio < 0.8 || areaRatio > 1.25) {
           // std::cout << "Skipping due to area ratio: " << i << " " << areaRatio << endl;
@@ -417,7 +417,7 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
           continue;
         }
 
-        // std::cout << "Not skipping: " << i << endl;
+        // std::cout << "Not skipping: " << i << " " << sideRatio << " " << areaRatio << endl;
         // std::cout << "Blob " << i << " " << orangeBlobs[i].avgX << " " << orangeBlobs[i].avgY 
         //       << " " << orangeBlobs[i].lpCount << " " << orangeBlobs[i].dx << " " << orangeBlobs[i].dy << endl;
 
