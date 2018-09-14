@@ -8,6 +8,7 @@
 vector<RLE*> ImageProcessor::getRLERow(int y, int width, int &start_idx) {
     // handle NULL case
     int xstep = 1 << iparams_.defaultHorizontalStepScale;
+    int ystep = 1 << iparams_.defaultVerticalStepScale;
     auto prev_color = getSegImg()[y * width];
     auto prev_idx = 0;
     vector<RLE*> encoding;
@@ -16,13 +17,13 @@ vector<RLE*> ImageProcessor::getRLERow(int y, int width, int &start_idx) {
         if(c == prev_color)
             continue;
         else {
-            encoding.push_back(new RLE(y, prev_idx, x - 1, start_idx, prev_color));
+            encoding.push_back(new RLE(y, prev_idx, x - 1, start_idx, prev_color, ystep));
             start_idx++;
             prev_color = c;
             prev_idx = x;
         }
     }
-    encoding.push_back(new RLE(y, prev_idx, width - 1, start_idx, prev_color));
+    encoding.push_back(new RLE(y, prev_idx, width - 1, start_idx, prev_color, ystep));
     start_idx++;
 
     return encoding;

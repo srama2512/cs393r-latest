@@ -17,6 +17,7 @@ vector<Blob> filterBlobs(vector<Blob> &blobs, Color color, int size=0) {
             continue;
         filtered.push_back(blobs[i]);
     }
+    sort(filtered.begin(), filtered.end(), BlobCompare);
     return filtered;
 }
 

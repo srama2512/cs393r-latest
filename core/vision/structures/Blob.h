@@ -31,6 +31,14 @@ struct Blob {
   Blob() : lpIndex(MAX_BLOB_VISIONPOINTS, 0) { }
 };
 
+inline ostream& operator<<(ostream &Str, Blob const& v) {
+  Str << "(" << v.avgX << ", " << v.avgY << ") ";
+  Str << "(" << v.xi << ", " << v.xf << ") ";
+  Str << "(" << v.yi << ", " << v.yf << ") ";
+
+  return Str;
+}
+
 /// @ingroup vision
 bool sortBlobAreaPredicate(Blob* left, Blob* right);
 bool BlobCompare(Blob a, Blob b);

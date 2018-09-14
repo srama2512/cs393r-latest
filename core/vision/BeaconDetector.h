@@ -2,12 +2,12 @@
 
 #include <vision/ObjectDetector.h>
 
-#define ASPECT_RATIO_LOW_BOUND 0.8
-#define ASPECT_RATIO_HIGH_BOUND 1.4
+#define ASPECT_RATIO_LOW_BOUND 0.5
+#define ASPECT_RATIO_HIGH_BOUND 2.0
 #define DENSITY_LOW_BOUND 0.6
 #define AREA_SIM_LOW_BOUND 0.6
 #define AREA_SIM_HIGH_BOUND 1.4
-#define WHITE_BELOW_BEACON_LOW_BOUND 0.7
+#define WHITE_BELOW_BEACON_LOW_BOUND 0.5
 
 class TextLogger;
 

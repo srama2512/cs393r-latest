@@ -34,18 +34,18 @@ struct RLE {
 	int xsum;
 	int ysum;
 
-    RLE(int y, int l, int r, int idx, int c) {
+    RLE(int y, int l, int r, int idx, int c, int ystep) {
         lcol = l;
         rcol = r;
         parent = idx;
         curr = idx;
-        npixels = r - l + 1;
+        npixels = (r - l + 1) * ystep;
         color = c;
         rank = 1;
 		xi = l; xf = r;
-		yi = y; yf = y;
-		xsum = ((r + l) / 2) * (r - l + 1);
-		ysum = y * (r - l + 1);
+		yi = y; yf = y + ystep - 1;
+		xsum = ((r + l) / 2) * (r - l + 1) * ystep;
+		ysum = y * (r - l + 1) * ystep;
     }
 };
 
