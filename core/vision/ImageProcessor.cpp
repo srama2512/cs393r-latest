@@ -416,9 +416,9 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
           continue;
         }
 
-        std::cout << "Not skipping: " << i << endl;
-        std::cout << "Blob " << i << " " << orangeBlobs[i].avgX << " " << orangeBlobs[i].avgY 
-              << " " << orangeBlobs[i].lpCount << " " << orangeBlobs[i].dx << " " << orangeBlobs[i].dy << endl;
+        // std::cout << "Not skipping: " << i << endl;
+        // std::cout << "Blob " << i << " " << orangeBlobs[i].avgX << " " << orangeBlobs[i].avgY 
+        //       << " " << orangeBlobs[i].lpCount << " " << orangeBlobs[i].dx << " " << orangeBlobs[i].dy << endl;
 
         BallCandidate* ballc = new BallCandidate();
         ballc->centerX = orangeBlobs[i].avgX;

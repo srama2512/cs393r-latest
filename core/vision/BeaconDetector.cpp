@@ -7,6 +7,12 @@ using namespace Eigen;
 BeaconDetector::BeaconDetector(DETECTOR_DECLARE_ARGS) : DETECTOR_INITIALIZE {
 }
 
+unsigned char* BeaconDetector::getSegImg(){
+    if(camera_ == Camera::TOP)
+        return vblocks_.robot_vision->getSegImgTop();
+    return vblocks_.robot_vision->getSegImgBottom();
+}
+
 vector<Blob> filterByAspectRatio(vector<Blob> blobs) {
     vector<Blob> ret;
     for(int i = 0; i < blobs.size(); ++i) {
@@ -76,6 +82,26 @@ pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const
     return beacons[0];
 }
 
+// maybe count the number of white pixels below that point in the segmented image
+bool validateInverted(pair<Blob, Blob> &bblob, unsigned char* segImg, const int width, const int xstep, const int ystep) {
+    int startX = min(bblob.first.xi, bblob.second.xi);
+    int endX = max(bblob.first.xf, bblob.second.xf);
+    int dy = max(bblob.first.dy, bblob.second.dy);
+    int startY = bblob.second.yf;
+
+    int tot_count = 0;
+    int white_count = 0;
+    for(int i = startX; i <= endX; i += xstep) {
+        for(int j = startY; j <= startY + dy; j += ystep) {
+            auto c = static_cast<Color>(segImg[j * width + i]);
+            white_count += c == c_WHITE ? 1 : 0;
+            tot_count++;
+        }
+    }
+    double ratio = (double) white_count / tot_count;
+    return ratio > WHITE_BELOW_BEACON_LOW_BOUND;
+}
+
 double density(Blob &b, int ystep) {
     double area = calculateBlobArea(b) / (ystep);
     double density = b.lpCount / area;
@@ -115,7 +141,9 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
         auto cbottom = beacon.second[1];
 
         pair<Blob, Blob> bblob = findBeaconsOfType(colorBlobs[ctop], colorBlobs[cbottom]);
-        if(bblob.first.invalid || bblob.second.invalid) {
+        const int xstep = (1 << iparams_.defaultHorizontalStepScale);
+        const int ystep = (1 << iparams_.defaultVerticalStepScale);
+        if(bblob.first.invalid || bblob.second.invalid || !validateInverted(bblob, getSegImg(), iparams_.width, xstep, ystep)) {
             object.seen = false;
             continue;
         }
