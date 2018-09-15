@@ -48,12 +48,18 @@ vector<pair<Blob, Blob> > makeBeaconPairs(vector<Blob> &tblobs, vector<Blob> &bb
                 continue;
             if(bblobs[j].avgX > tblobs[i].xf || bblobs[j].avgX < tblobs[i].xi)
                 continue;
+            if(bblobs[j].yi - tblobs[i].yf > VERTICAL_SEPARATION_HIGH_BOUND)
+                continue;
+
+        #ifdef ENABLE_AREA_SIM_FILTERING
             double tarea = calculateBlobArea(tblobs[i]);
             double barea = calculateBlobArea(bblobs[j]);
             double areaSim = tarea / barea;
             if(areaSim > AREA_SIM_HIGH_BOUND || areaSim < AREA_SIM_LOW_BOUND)
                 continue;
             // cout << "AS: " << areaSim << endl;
+        #endif
+
             tblobs[i].invalid = false;
             bblobs[j].invalid = false;
             beacons.push_back(make_pair(tblobs[i], bblobs[j]));
@@ -64,11 +70,13 @@ vector<pair<Blob, Blob> > makeBeaconPairs(vector<Blob> &tblobs, vector<Blob> &bb
 
 bool validateInverted(pair<Blob, Blob> &bblob, unsigned char* segImg, const int width, const int xstep, const int ystep) {
     int startX = (bblob.first.xi + bblob.second.xi) / 2;
-    int endX = (bblob.first.xf + bblob.second.xf) / 2;
+    startX -= startX % xstep;
+    int startY = bblob.second.yf;
+    startY -= startY % ystep;
+    int dx = (bblob.first.dx + bblob.second.dx) / 2;
     int dy = (bblob.first.dy + bblob.second.dy) / 2;
-    int startY = bblob.second.yf - ystep + 1;
+    int endX = startX + dx;
     int endY = startY + dy;
-    // cout << startX << " " << endX << " " << startY << " " << startY + dy << endl;
 
     int tot_count = 1;
     int white_count = 0;
@@ -88,6 +96,7 @@ bool validateInverted(pair<Blob, Blob> &bblob, unsigned char* segImg, const int 
 pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const vector<Blob> &bb) {
     int xstep = 1 << iparams_.defaultHorizontalStepScale;
     int ystep = 1 << iparams_.defaultVerticalStepScale;
+
     // check if the aspect ratio is within ASPECT_RATIO_LOW_BOUND & ASPECT_RATIO_HIGH_BOUND
     auto tblobs = filterByAspectRatio(tb);
     auto bblobs = filterByAspectRatio(bb);
@@ -135,10 +144,10 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
     };
 
     map<Color, vector<Blob> > colorBlobs = {
-        { c_BLUE,       filterBlobs(blobs, c_BLUE, 100)     },
-        { c_YELLOW,     filterBlobs(blobs, c_YELLOW, 100)   },
-        { c_PINK,       filterBlobs(blobs, c_PINK, 100)     },
-        { c_WHITE,      filterBlobs(blobs, c_WHITE, 100)    }
+        { c_BLUE,       filterBlobs(blobs, c_BLUE, 50)     },
+        { c_YELLOW,     filterBlobs(blobs, c_YELLOW, 50)   },
+        { c_PINK,       filterBlobs(blobs, c_PINK, 50)     },
+        { c_WHITE,      filterBlobs(blobs, c_WHITE, 50)    }
     };
 
     for(auto beacon : beacons) {
