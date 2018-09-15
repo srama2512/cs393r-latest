@@ -68,15 +68,21 @@ vector<pair<Blob, Blob> > makeBeaconPairs(vector<Blob> &tblobs, vector<Blob> &bb
     return beacons;
 }
 
-bool validateInverted(pair<Blob, Blob> &bblob, unsigned char* segImg, const int width, const int xstep, const int ystep) {
+bool BeaconDetector::validateInverted(pair<Blob, Blob> &bblob) {
+    unsigned char* segImg = getSegImg();
+    const int width = iparams_.width;
+    const int height = iparams_.height;
+    const int xstep = (1 << iparams_.defaultHorizontalStepScale);
+    const int ystep = (1 << iparams_.defaultVerticalStepScale);
+    
     int startX = (bblob.first.xi + bblob.second.xi) / 2;
-    startX -= startX % xstep;
+    startX -= (startX % xstep);
     int startY = bblob.second.yf;
-    startY -= startY % ystep;
+    startY -= (startY % ystep);
     int dx = (bblob.first.dx + bblob.second.dx) / 2;
     int dy = (bblob.first.dy + bblob.second.dy) / 2;
-    int endX = startX + dx;
-    int endY = startY + dy;
+    int endX = min(width - 1, startX + dx);
+    int endY = min(height - 1, startY + dy);
 
     int tot_count = 1;
     int white_count = 0;
@@ -93,9 +99,49 @@ bool validateInverted(pair<Blob, Blob> &bblob, unsigned char* segImg, const int 
     return ratio >= WHITE_BELOW_BEACON_LOW_BOUND;
 }
 
+bool BeaconDetector::validateUp(pair<Blob, Blob> &bblob) {
+    unsigned char* segImg = getSegImg();
+    const int width = iparams_.width;
+    const int height = iparams_.height;
+    const int xstep = (1 << iparams_.defaultHorizontalStepScale);
+    const int ystep = (1 << iparams_.defaultVerticalStepScale);
+
+    int startX = (bblob.first.xi + bblob.second.xi) / 2;
+    startX -= (startX % xstep);
+    int dx = (bblob.first.dx + bblob.second.dx) / 2;
+    int dy = (bblob.first.dy + bblob.second.dy) / 2;
+    int startY = max(0, bblob.first.yi - dy);
+    startY -= (startY % ystep);
+    int endX = min(width - 1, startX + dx);
+    int endY = min(height - 1, startY + dy);
+
+    int tot_count = 1;
+    map<Color, int> colorCount = {
+        {c_BLUE, 0},
+        {c_YELLOW, 0},
+        {c_PINK, 0}
+    };
+
+    for(int i = startX; i <= endX; i += xstep) {
+        for(int j = startY; j <= endY; j += ystep) {
+            auto c = static_cast<Color>(segImg[j * width + i]);
+            tot_count++;
+            if(colorCount.find(c) != colorCount.end()) {
+                colorCount[c]++;
+            }
+        }
+    }
+
+    for(auto color: colorCount) {
+        double ratio = (double) color.second / tot_count;
+        if(ratio >= COLOR_ABOVE_BEACON_HIGH_BOUND)
+            return false;
+    }
+
+    return true;
+}
+
 pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const vector<Blob> &bb) {
-    int xstep = 1 << iparams_.defaultHorizontalStepScale;
-    int ystep = 1 << iparams_.defaultVerticalStepScale;
 
     // check if the aspect ratio is within ASPECT_RATIO_LOW_BOUND & ASPECT_RATIO_HIGH_BOUND
     auto tblobs = filterByAspectRatio(tb);
@@ -107,8 +153,9 @@ pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const
     auto beacons = makeBeaconPairs(tblobs, bblobs);
 
     for(int i = 0; i < beacons.size(); ++i) {
-        if(validateInverted(beacons[i], getSegImg(), iparams_.width, xstep, ystep))
-            return beacons[i];
+        if(!validateInverted(beacons[i]) || !validateUp(beacons[i]))
+            continue;
+        return beacons[i];
     }
 
     // no valid beacon found return invalid

@@ -11,6 +11,7 @@
 #define AREA_SIM_HIGH_BOUND 2.0
 
 #define WHITE_BELOW_BEACON_LOW_BOUND 0.5
+#define COLOR_ABOVE_BEACON_HIGH_BOUND 0.5
 #define VERTICAL_SEPARATION_HIGH_BOUND 10
 
 class TextLogger;
@@ -21,6 +22,8 @@ class BeaconDetector : public ObjectDetector {
   BeaconDetector(DETECTOR_DECLARE_ARGS);
   void init(TextLogger* tl){ textlogger = tl; }
   unsigned char* getSegImg();
+  bool validateInverted(pair<Blob, Blob> &bblob);
+  bool validateUp(pair<Blob, Blob> &bblob);
   pair<Blob, Blob> findBeaconsOfType(const vector<Blob> &tb, const vector<Blob> &bb);
   void findBeacons(vector<Blob> &blobs);
  private:
