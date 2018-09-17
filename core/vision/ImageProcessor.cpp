@@ -384,7 +384,13 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
     }
     ball_candidates.clear();
 
-    if(getSegImg() == NULL){
+    const int width = iparams_.width;
+    const int height = iparams_.height;
+    const int xstep = (1 << iparams_.defaultHorizontalStepScale);
+    const int ystep = (1 << iparams_.defaultVerticalStepScale);
+    unsigned char* segImg = getSegImg();
+
+    if(segImg == NULL){
         return ball_candidates;
     }
 
@@ -416,6 +422,29 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
         if (areaRatio < 0.8 || areaRatio > 1.25) {
           // std::cout << "Skipping due to area ratio: " << i << " " << areaRatio << endl;
           // cout << "skipping" << endl;
+          continue;
+        }
+        // filter out candidate if not on green ground
+        int xstart = max(orangeBlobs[i].avgX - orangeBlobs[i].dx * 2, 0);
+        int xend   = min(orangeBlobs[i].avgX + orangeBlobs[i].dx * 2, width-1);
+        int ystart = max(orangeBlobs[i].avgY - orangeBlobs[i].dy * 2, 0);
+        int yend   = min(orangeBlobs[i].avgY + orangeBlobs[i].dy * 2, height-1);
+        xstart -= xstart % xstep;
+        xend -= xend % xstep;
+        ystart -= ystart % ystep;
+        yend -= yend % ystep;
+
+        int tot_count = 1;
+        int green_count = 0;
+        for(int x=xstart; x <= xend; x++){
+          for(int y=ystart; y <= yend; y++){
+            auto c = static_cast<Color>(segImg[y * width + x]);
+            green_count += c == c_FIELD_GREEN ? 1 : 0;
+            tot_count += 1;
+          }
+        }
+        // If the ball is near bottom of image, it can still be green
+        if ((double) green_count / tot_count < 0.2 && (ystart - yend) > 5){
           continue;
         }
 
