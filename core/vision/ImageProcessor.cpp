@@ -397,54 +397,49 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
     auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 50);
     sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
     for(int i = 0; i < orangeBlobs.size(); ++i) {
-        // int xstep = 1 << iparams_.defaultHorizontalStepScale;
-        // int ystep = 1 << iparams_.defaultVerticalStepScale;
-        // std::cout << "xstep " << xstep << endl;
-        // std::cout << "ystep " << ystep << endl;
-        // heuristics to filter out spurious balls
-        // ratio of sides
-        // std::cout << "iprams " << iparams_.defaultVerticalStepScale << " " << iparams_.
-        // std::cout << "Blob " << i << " " << orangeBlobs[i].avgX << " " << orangeBlobs[i].avgY 
-        //       << " " << orangeBlobs[i].lpCount << " " << orangeBlobs[i].dx << " " << orangeBlobs[i].dy << endl;
 
-        float sideRatio = float(orangeBlobs[i].dx) / (orangeBlobs[i].dy);
+        double sideRatio = double(orangeBlobs[i].dx) / (orangeBlobs[i].dy);
         // cout << sideRatio << endl;
-        if (sideRatio < 0.8 || sideRatio > 1.25) {
+        if (sideRatio < 0.6 || sideRatio > 1.4) {
           // std::cout << "Skipping due to side ratio: " << i << " " << sideRatio << endl;
           // cout << "skipping" << endl;
           continue;
         }
 
         // area ratio
-        float rectArea = (orangeBlobs[i].dx) * (orangeBlobs[i].dy);
-        float areaRatio = (orangeBlobs[i].lpCount / rectArea) / (M_PI / 4.0);
+        double rectArea = (orangeBlobs[i].dx) * (orangeBlobs[i].dy);
+        double density = (orangeBlobs[i].lpCount / rectArea);
         // cout << areaRatio << endl;
-        if (areaRatio < 0.8 || areaRatio > 1.25) {
+        if (density < 0.6) {
           // std::cout << "Skipping due to area ratio: " << i << " " << areaRatio << endl;
           // cout << "skipping" << endl;
           continue;
         }
+
+        if (rectArea > 1600)
+            continue;
+
         // filter out candidate if not on green ground
-        int xstart = max(orangeBlobs[i].avgX - orangeBlobs[i].dx * 2, 0);
-        int xend   = min(orangeBlobs[i].avgX + orangeBlobs[i].dx * 2, width-1);
-        int ystart = max(orangeBlobs[i].avgY - orangeBlobs[i].dy * 2, 0);
-        int yend   = min(orangeBlobs[i].avgY + orangeBlobs[i].dy * 2, height-1);
+        int xstart = max(orangeBlobs[i].avgX - orangeBlobs[i].dx * 1, 0);
+        int xend   = min(orangeBlobs[i].avgX + orangeBlobs[i].dx * 1, width - 1);
+        int ystart = min(orangeBlobs[i].avgY + orangeBlobs[i].dy, height - 1);
+        int yend   = min(orangeBlobs[i].avgY + orangeBlobs[i].dy * 2, height - 1);
         xstart -= xstart % xstep;
         xend -= xend % xstep;
         ystart -= ystart % ystep;
         yend -= yend % ystep;
 
-        int tot_count = 1;
-        int green_count = 0;
-        for(int x=xstart; x <= xend; x++){
-          for(int y=ystart; y <= yend; y++){
+        double tot_count = 1;
+        double green_count = 0;
+        for(int x=xstart; x <= xend; x += xstep){
+          for(int y=ystart; y <= yend; y += ystep){
             auto c = static_cast<Color>(segImg[y * width + x]);
-            green_count += c == c_FIELD_GREEN ? 1 : 0;
+            green_count += (c == c_FIELD_GREEN) ? 1 : 0;
             tot_count += 1;
           }
         }
         // If the ball is near bottom of image, it can still be green
-        if ((double) green_count / tot_count < 0.2 && (ystart - yend) > 5){
+        if (green_count / tot_count < 0.2 && (yend - ystart) > 5) {
           continue;
         }
 
