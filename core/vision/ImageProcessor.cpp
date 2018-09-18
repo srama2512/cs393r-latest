@@ -322,7 +322,7 @@ void ImageProcessor::detectGoal() {
     int imageX = -1, imageY = -1;
     findGoal(imageX, imageY);
 
-    WorldObject* goal = &vblocks_.world_object->objects_[WO_OPP_GOAL];
+    WorldObject* goal = &vblocks_.world_object->objects_[WO_UNKNOWN_GOAL];
     if(imageX == -1 && imageY == -1){
         goal->seen = false;
         return;
