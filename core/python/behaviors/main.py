@@ -195,8 +195,8 @@ class Playing(StateMachine):
 
             self.minDist = 750
             self.maxDist = 1000
-            self.midX = 640
-            self.midY = 480
+            self.midX = 160
+            self.midY = 120
             self.thresh = 10
             self.turn_angle = 0.1
             self.object_type = object_type
