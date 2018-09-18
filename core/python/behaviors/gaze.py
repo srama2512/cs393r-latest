@@ -76,7 +76,7 @@ class Playing(StateMachine):
             self.ball_seen = False
 
             # Velocity prediction
-            self.prev_time = 0.0
+            self.prev_time = -10000.0
             self.prevXR = 0.0
             self.prevYR = 0.0
             self.velXR = 0.0
@@ -87,6 +87,9 @@ class Playing(StateMachine):
 
         def sgn(self, x):
             return 1.0 if x > 0.0 else -1.0
+
+        def clip(self, x, xmin, xmax):
+            return max(min(x, xmax), xmin)
 
         def run(self):
             """If the ball was seen, then move head towards the ball"""
@@ -100,8 +103,8 @@ class Playing(StateMachine):
                 ballX = ball.imageCenterX
                 ballY = ball.imageCenterY
                 
-                ballXR = ball.visionDistance * math.sin(ball.visionBearing)
-                ballYR = ball.visionDistance * math.cos(ball.visionBearing)
+                ballXR = ball.visionDistance * math.sin(-1.0 * ball.visionBearing)
+                ballYR = ball.visionDistance * math.cos(-1.0 * ball.visionBearing)
 
                 time_diff = (self.getTime() - self.prev_time) + 1e-1
                 vXR = (ballXR - self.prevXR) / time_diff
@@ -139,9 +142,13 @@ class Playing(StateMachine):
                     pass
                 else:
 
-                    tilt = core.joint_values[core.HeadPitch] + self.sgn(self.velYR)*self.delta_tilt
+                    tilt = self.clip(core.joint_values[core.HeadPitch] + self.sgn(self.velYR) * self.delta_tilt * 0.3, -22.0 * core.DEG_T_RAD, 0.0)
                     commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration)
-                    pan = core.joint_values[core.HeadYaw] + self.sgn(self.XR)*self.delta_pan
+                    if abs(self.velXR) > 100:
+                        pan = core.joint_values[core.HeadYaw] - self.sgn(self.velXR) * self.delta_pan * 2.
+                    else:
+                        pan = core.joint_values[core.HeadYaw] - self.sgn(self.velXR) * self.delta_pan * 0.3
+                    pan = self.clip(pan, -75.0 * core.DEG_T_RAD, 75.0 * core.DEG_T_RAD)
                     commands.setHeadPan(pan, target_time=self.duration)
 
 

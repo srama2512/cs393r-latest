@@ -327,9 +327,6 @@ void ImageProcessor::detectGoal() {
         goal->seen = false;
         return;
     }
-    
-    // double density = (orangeBlobs[i].lpCount / rectArea);
-
 
     goal->imageCenterX = imageX;
     goal->imageCenterY = imageY;
@@ -364,7 +361,7 @@ void ImageProcessor::findGoal(int& imageX, int& imageY) {
             imageY = blueBlobs[0].yf;
         }
         else {
-            cout << "Skipping " << blueBlobs[0].avgX << " " << blueBlobs[0].yf << " " << density << endl;
+            // cout << "Skipping " << blueBlobs[0].avgX << " " << blueBlobs[0].yf << " " << density << endl;
             imageX = -1;
             imageY = -1;
         }
@@ -422,7 +419,7 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
         double rectArea = (orangeBlobs[i].dx) * (orangeBlobs[i].dy);
         double density = (orangeBlobs[i].lpCount / rectArea);
         // cout << areaRatio << endl;
-        if (density < 0.6) {
+        if (density < 0.5) {
           // std::cout << "Skipping due to area ratio: " << i << " " << areaRatio << endl;
           // cout << "skipping" << endl;
           continue;
