@@ -214,8 +214,13 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
 
         object.imageCenterX = (bblob.first.avgX + bblob.second.avgX) / 2;
         object.imageCenterY = (bblob.first.avgY + bblob.second.avgY) / 2;
+
+        double bwidth = (bblob.first.dx + bblob.second.dx) / 2.0;
+        double bheight = (bblob.first.dy + bblob.second.dy) / 2.0;
+        double bdistance = (cmatrix_.getWorldDistanceByWidth(bwidth, 110.0) + cmatrix_.getWorldDistanceByHeight(bheight, 100.0)) / 2.0;
+
         auto position = cmatrix_.getWorldPosition(object.imageCenterX, object.imageCenterY, heights[beacon.first]);
-        object.visionDistance = cmatrix_.groundDistance(position);
+        object.visionDistance = bdistance;
         object.visionBearing = cmatrix_.bearing(position);
         object.seen = true;
         object.fromTopCamera = (camera_ == Camera::TOP);
@@ -230,7 +235,7 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
         // cout << "Total AR: " << aspect_ratio << endl;
         // cout << "AR: " << calculateBlobAspectRatio(bblob.first) << ", " << calculateBlobAspectRatio(bblob.second) << endl;
         // cout << "density: " << density(bblob.first) << ", " << density(bblob.second) << endl;"
-        // cout << "saw " << getName(beacon.first) << " at (" << object.imageCenterX << "," << object.imageCenterY << ") with calculated distance " << object.visionDistance << endl;
+        cout << "saw " << getName(beacon.first) << " at (" << object.imageCenterX << "," << object.imageCenterY << ") with calculated distance " << object.visionDistance << endl;
     }
-    // cout << endl << endl;
+    cout << endl << endl;
 }
