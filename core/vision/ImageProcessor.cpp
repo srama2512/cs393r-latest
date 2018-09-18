@@ -337,8 +337,8 @@ void ImageProcessor::detectGoal() {
     goal->visionDistance = cmatrix_.groundDistance(p);
     goal->fromTopCamera = (camera_ == Camera::TOP);
 
-    cout << "Goal pan: " << goal->visionBearing << "   Goal tilt: " << goal->visionElevation << endl;
-    cout << "Goal distance: " << goal->visionDistance << endl << endl;
+    // cout << "Goal pan: " << goal->visionBearing << "   Goal tilt: " << goal->visionElevation << endl;
+    // cout << "Goal distance: " << goal->visionDistance << endl << endl;
     goal->seen = true;
 }
 
@@ -347,20 +347,20 @@ void ImageProcessor::findGoal(int& imageX, int& imageY) {
     if(getSegImg() == NULL){
         imageX = -1;
         imageY = -1;
-        cout << "Goal not detected" << endl;
+        // cout << "Goal not detected" << endl;
         return;
     }
     auto blueBlobs = filterBlobs(detected_blobs, c_BLUE, 2000);
     sort(blueBlobs.begin(), blueBlobs.end(), BlobCompare);
     if(blueBlobs.size() > 0) {
-        cout << "Goal detected at: " << blueBlobs[0].avgX << "\t" << blueBlobs[0].yf << endl;
+        // cout << "Goal detected at: " << blueBlobs[0].avgX << "\t" << blueBlobs[0].yf << endl;
         imageX = blueBlobs[0].avgX;
         imageY = blueBlobs[0].yf;
     }
     else {
         imageX = -1;
         imageY = -1;
-        cout << "Goal not detected" << endl;
+        // cout << "Goal not detected" << endl;
     }
 }
 

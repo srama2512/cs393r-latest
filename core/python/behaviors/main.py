@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 from task import Task
 
+import sys
 import math
 import time
 import core
@@ -120,17 +121,17 @@ class Playing(StateMachine):
                 self.finish()
 
     class LookAtBall(Node):
-        def __init__(self, duration=3.0):
+        def __init__(self, delta_pan=6, delta_tilt=10, duration=3.0):
             """
             duration: time in seconds
             """
             super(Playing.LookAtBall, self).__init__()
             self.duration = duration
             self.thresh = 20 # if the ball is 5 pixels away, only then move
-            self.delta_pan = 6 * core.DEG_T_RAD
-            self.delta_tilt = 10 * core.DEG_T_RAD
-            self.midX = 640
-            self.midY = 480
+            self.delta_pan = delta_pan * core.DEG_T_RAD
+            self.delta_tilt = delta_tilt * core.DEG_T_RAD
+            self.midX = 160
+            self.midY = 120
             self.ball_seen = False
 
         def run(self):
@@ -147,7 +148,7 @@ class Playing(StateMachine):
             if ball.seen:
                 ballX = ball.imageCenterX
                 ballY = ball.imageCenterY
-                print('vertY: ', ballY - self.midY)
+                # print('vertY: ', ballY - self.midY)
                 if abs(ballY - self.midY) > self.thresh:
                     if ballY > self.midY:
                         tilt = core.joint_values[core.HeadPitch] - self.delta_tilt
@@ -155,7 +156,7 @@ class Playing(StateMachine):
                         tilt = core.joint_values[core.HeadPitch] + self.delta_tilt
                     commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration)
                 
-                print('vertX: ', ballX - self.midX)
+                # print('vertX: ', ballX - self.midX)
                 if abs(ballX - self.midX) > self.thresh:
                    if ballX > self.midX:
                        pan = core.joint_values[core.HeadYaw] - self.delta_pan
@@ -170,7 +171,7 @@ class Playing(StateMachine):
             tilt: (up/down) in degrees
             duration: time in seconds
             """
-            super(Playing.HeadPos, self).__init__()
+            super(Playing.SearchForBall, self).__init__()
             self.pan = pan * core.DEG_T_RAD
             self.tilt = tilt
             self.duration = duration 
@@ -178,9 +179,14 @@ class Playing(StateMachine):
             """If the ball was seen, then move head towards the ball"""
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
             if ball.seen:
+                print ('Found ball')
+                sys.stdout.flush()
                 self.finish()
             if self.getTime() > self.duration:
+                print ('Finished search')
+                sys.stdout.flush()
                 self.finish()
+
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class MaintainDistance(Node):
@@ -232,7 +238,7 @@ class Playing(StateMachine):
         off = self.Off()
         readjoints = self.ReadJoints()
         readsensors = self.ReadPressureSensors()
-        lookatball = self.LookAtBall(0.5)
+        lookatball = self.LookAtBall(delta_pan=8, duration=0.2)
 
         maintaindist = self.MaintainDistance(object_type=core.WO_OPP_GOAL)
 
@@ -242,16 +248,15 @@ class Playing(StateMachine):
         up = self.HeadPos(0, 22, 4.0)
         down = self.HeadPos(0, -22, 4.0)
 
-        leftSearch = self.SearchForBall(22, 0)
-        rightSearch = self.SearchForBall(-22, 0)
-        upSearch = self.SearchForBall(0, 22, 4.0)
-        downSearch = self.SearchForBall(0, -22, 4.0)
+        leftSearch = self.SearchForBall(75, 0, 4.0)
+        rightSearch = self.SearchForBall(-75, 0, 4.0)
+        downSearch = self.SearchForBall(0, -30, 4.0)
 
         # self.trans(sit, C, center, T(2.0))
         # self.trans(stand, C, center, T(2.0))
         # self.trans(stand, C, readsensors, C, readjoints, C, off, C)
         # self.trans(stand, C, center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), sit, C, off)
-        self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, upSearch, C, downSearch, C, lookatball, C, off)
+        self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, downSearch, C, lookatball, C, sit, C, off)
         # self.trans(stand, C, lookatball, C, sit, C, off)
         # self.trans(stand, C, walk, T(5.0), walkturn, T(5.0), walkcurve, T(10.0), sit, C, off)
         # self.trans(stand, C, down, T(2.0), maintaindist, C, sit, C, off)
