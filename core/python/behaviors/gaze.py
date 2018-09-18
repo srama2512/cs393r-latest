@@ -77,10 +77,10 @@ class Playing(StateMachine):
 
             # Velocity prediction
             self.prev_time = 0.0
-            self.prevX = 0.0
-            self.prevY = 0.0
-            self.velX = 0.0
-            self.velY = 0.0
+            self.prevXR = 0.0
+            self.prevYR = 0.0
+            self.velXR = 0.0
+            self.velYR = 0.0
             self.momentum = 0.9
             self.max_vel = 3.0
             self.time_ball_not_present_thresh = 2.0
@@ -93,54 +93,56 @@ class Playing(StateMachine):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
 
             print ("")
-            print (self.velX, self.velY)
+            print (self.velXR, self.velYR)
             sys.stdout.flush()
 
             if ball.seen:
                 ballX = ball.imageCenterX
                 ballY = ball.imageCenterY
+                
+                ballXR = ball.visionDistance * math.sin(ball.visionBearing)
+                ballYR = ball.visionDistance * math.cos(ball.visionBearing)
 
                 time_diff = (self.getTime() - self.prev_time) + 1e-1
-                vX = (ballX - self.prevX) / time_diff
-                vY = (ballY - self.prevY) / time_diff
+                vXR = (ballXR - self.prevXR) / time_diff
+                vYR = (ballYR - self.prevYR) / time_diff
 
-                print ("Raw vels: ", vX, vY)
+                print ("Raw vels: ", vXR, vYR)
 
-                self.velX = self.velX * self.momentum + (1. - self.momentum) * vX
-                self.velY = self.velY * self.momentum + (1. - self.momentum) * vY
-
-                self.velX = self.velX if abs(self.velX) < self.max_vel else self.sgn(self.velX) * self.max_vel
-                self.velY = self.velY if abs(self.velY) < self.max_vel else self.sgn(self.velY) * self.max_vel
+                self.velXR = self.velXR * self.momentum + (1. - self.momentum) * vXR
+                self.velYR = self.velYR * self.momentum + (1. - self.momentum) * vYR
 
                 self.prev_time = self.getTime()
-                self.prevX = ballX
-                self.prevY = ballY
+                self.prevXR = ballXR
+                self.prevYR = ballYR
+
+                if abs(ballY - self.midY) > self.thresh:
+                    if ballY > self.midY and core.joint_values[core.HeadPitch] > -22 * core.DEG_T_RAD:
+                        tilt = core.joint_values[core.HeadPitch] - self.delta_tilt
+                    elif core.joint_values[core.HeadPitch] < 0.0:
+                        tilt = core.joint_values[core.HeadPitch] + self.delta_tilt
+                    else:
+                        tilt = core.joint_values[core.HeadPitch]
+                    commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration)
+
+                if abs(ballX - self.midX) > self.thresh:
+                   if ballX > self.midX:
+                       pan = core.joint_values[core.HeadYaw] - self.delta_pan
+                   else:
+                       pan = core.joint_values[core.HeadYaw] + self.delta_pan
+                   commands.setHeadPan(pan, target_time=self.duration)
 
             else:
                 time_diff = (self.getTime() - self.prev_time) + 1e-1
 
                 if time_diff > self.time_ball_not_present_thresh:
-                    ballX = self.midX
-                    ballY = self.midY
+                    pass
                 else:
-                    ballX = self.prevX + time_diff * self.velX
-                    ballY = self.prevY + time_diff * self.velY
 
-            if abs(ballY - self.midY) > self.thresh:
-                if ballY > self.midY and core.joint_values[core.HeadPitch] > -22 * core.DEG_T_RAD:
-                    tilt = core.joint_values[core.HeadPitch] - self.delta_tilt
-                elif core.joint_values[core.HeadPitch] < 0.0:
-                    tilt = core.joint_values[core.HeadPitch] + self.delta_tilt
-                else:
-                    tilt = core.joint_values[core.HeadPitch]
-                commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration)
-
-            if abs(ballX - self.midX) > self.thresh:
-               if ballX > self.midX:
-                   pan = core.joint_values[core.HeadYaw] - self.delta_pan
-               else:
-                   pan = core.joint_values[core.HeadYaw] + self.delta_pan
-               commands.setHeadPan(pan, target_time=self.duration)
+                    tilt = core.joint_values[core.HeadPitch] + self.sgn(self.velYR)*self.delta_tilt
+                    commands.setHeadTilt(tilt * core.RAD_T_DEG, target_time=self.duration)
+                    pan = core.joint_values[core.HeadYaw] + self.sgn(self.XR)*self.delta_pan
+                    commands.setHeadPan(pan, target_time=self.duration)
 
 
     class SearchForBall(Node):
