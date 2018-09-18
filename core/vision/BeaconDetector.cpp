@@ -134,6 +134,7 @@ bool BeaconDetector::validateUp(pair<Blob, Blob> &bblob) {
 
     for(auto color: colorCount) {
         double ratio = (double) color.second / tot_count;
+        // cout << COLOR_NAME(color.first) << " " << ratio << endl;
         if(ratio >= COLOR_ABOVE_BEACON_HIGH_BOUND)
             return false;
     }
@@ -209,6 +210,8 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
             continue;
         }
 
+        double aspect_ratio = (calculateBlobAspectRatio(bblob.first) + calculateBlobAspectRatio(bblob.second)) / 2.0;
+
         object.imageCenterX = (bblob.first.avgX + bblob.second.avgX) / 2;
         object.imageCenterY = (bblob.first.avgY + bblob.second.avgY) / 2;
         auto position = cmatrix_.getWorldPosition(object.imageCenterX, object.imageCenterY, heights[beacon.first]);
@@ -216,9 +219,17 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
         object.visionBearing = cmatrix_.bearing(position);
         object.seen = true;
         object.fromTopCamera = (camera_ == Camera::TOP);
+
+        if(aspect_ratio <= OCCLUDED_ASPECT_RATIO_HIGH_BOUND) {
+            object.occluded = true;
+        }
+        else {
+            object.occluded = false;
+        }
         
+        cout << "Total AR: " << aspect_ratio << endl;
         // cout << "AR: " << calculateBlobAspectRatio(bblob.first) << ", " << calculateBlobAspectRatio(bblob.second) << endl;
-        // cout << "density: " << density(bblob.first) << ", " << density(bblob.second) << endl;
+        // cout << "density: " << density(bblob.first) << ", " << density(bblob.second) << endl;"
         cout << "saw " << getName(beacon.first) << " at (" << object.imageCenterX << "," << object.imageCenterY << ") with calculated distance " << object.visionDistance << endl;
     }
     cout << endl << endl;

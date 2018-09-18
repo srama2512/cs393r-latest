@@ -350,5 +350,13 @@ void VisionWindow::drawBeacons(ImageWidget* image) {
     bpath.addRoundedRect(QRect(x1, by1, width, height), 5, 5);
     painter.setPen(bpen);
     painter.fillPath(bpath, QBrush(beacon.second[1]));
+
+    // Draw pointer if occluded
+    if(object.occluded) {
+      painter.setPen(QPen(Qt::red));
+      painter.setFont(QFont("Helvetica", 8));
+      painter.drawText(QPointF(object.imageCenterX - width, object.imageCenterY + 1.5 * height), "Occluded");
+    }
+
   }
 }
