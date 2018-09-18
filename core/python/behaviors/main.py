@@ -163,6 +163,26 @@ class Playing(StateMachine):
                        pan = core.joint_values[core.HeadYaw] + self.delta_pan
                    commands.setHeadPan(pan, target_time=self.duration)
 
+    class SearchForBall(Node):
+        def __init__(self, pan=0, tilt=0, duration=2.0):
+            """
+            pan: (left/right) in degrees
+            tilt: (up/down) in degrees
+            duration: time in seconds
+            """
+            super(Playing.HeadPos, self).__init__()
+            self.pan = pan * core.DEG_T_RAD
+            self.tilt = tilt
+            self.duration = duration 
+        def run(self):
+            """If the ball was seen, then move head towards the ball"""
+            ball = memory.world_objects.getObjPtr(core.WO_BALL)
+            if ball.seen:
+                self.finish()
+            if self.getTime() > self.duration:
+                self.finish()
+            commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
+
     class MaintainDistance(Node):
         def __init__(self, object_type=core.WO_BALL):
             super(Playing.MaintainDistance, self).__init__()
@@ -221,11 +241,17 @@ class Playing(StateMachine):
         right = self.HeadPos(-22, 0)
         up = self.HeadPos(0, 22, 4.0)
         down = self.HeadPos(0, -22, 4.0)
-        
+
+        leftSearch = self.SearchForBall(22, 0)
+        rightSearch = self.SearchForBall(-22, 0)
+        upSearch = self.SearchForBall(0, 22, 4.0)
+        downSearch = self.SearchForBall(0, -22, 4.0)
+
         # self.trans(sit, C, center, T(2.0))
-        self.trans(stand, C, center, T(2.0))
+        # self.trans(stand, C, center, T(2.0))
         # self.trans(stand, C, readsensors, C, readjoints, C, off, C)
         # self.trans(stand, C, center, T(2.0), left, T(2.0), right, T(2.0), up, T(2.0), down, T(2.0), sit, C, off)
+        self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, upSearch, C, downSearch, C, lookatball, C, off)
         # self.trans(stand, C, lookatball, C, sit, C, off)
         # self.trans(stand, C, walk, T(5.0), walkturn, T(5.0), walkcurve, T(10.0), sit, C, off)
         # self.trans(stand, C, down, T(2.0), maintaindist, C, sit, C, off)
