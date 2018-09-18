@@ -327,6 +327,9 @@ void ImageProcessor::detectGoal() {
         goal->seen = false;
         return;
     }
+    
+    // double density = (orangeBlobs[i].lpCount / rectArea);
+
 
     goal->imageCenterX = imageX;
     goal->imageCenterY = imageY;
@@ -354,8 +357,17 @@ void ImageProcessor::findGoal(int& imageX, int& imageY) {
     sort(blueBlobs.begin(), blueBlobs.end(), BlobCompare);
     if(blueBlobs.size() > 0) {
         // cout << "Goal detected at: " << blueBlobs[0].avgX << "\t" << blueBlobs[0].yf << endl;
-        imageX = blueBlobs[0].avgX;
-        imageY = blueBlobs[0].yf;
+        double rectArea = (blueBlobs[0].dx) * (blueBlobs[0].dy);
+        double density = (blueBlobs[0].lpCount / rectArea);
+        if (density > 0.7) {
+            imageX = blueBlobs[0].avgX;
+            imageY = blueBlobs[0].yf;
+        }
+        else {
+            cout << "Skipping " << blueBlobs[0].avgX << " " << blueBlobs[0].yf << " " << density << endl;
+            imageX = -1;
+            imageY = -1;
+        }
     }
     else {
         imageX = -1;
