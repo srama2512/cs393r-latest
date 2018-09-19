@@ -195,7 +195,7 @@ class Playing(StateMachine):
         walkcurve = self.WalkCurve()
         sit = pose.Sit()
         off = self.Off()
-        lookatball = self.LookAtBall(delta_pan=8, duration=0.2)
+        lookatball = self.LookAtBall(delta_pan=12, duration=0.2)
 
         center = self.HeadPos(0, 0)
 
