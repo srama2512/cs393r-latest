@@ -18,7 +18,7 @@ ImageParams::ImageParams(Camera::Type camera) {
   else {
     width = 320;        // 320
     height = 240;       // 240
-    defaultHorizontalStepScale = 1;         // 0
+    defaultHorizontalStepScale = 2;         // 0
     defaultVerticalStepScale = 1;           // 0
   }
 

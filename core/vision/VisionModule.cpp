@@ -67,11 +67,11 @@ void VisionModule::processFrame() {
   }
 #endif
 
-  tlog(30, "Processing bottom camera");
-  bottom_processor_->processFrame();
-
   tlog(30, "Processing top camera");
   top_processor_->processFrame();
+
+  tlog(30, "Processing bottom camera");
+  bottom_processor_->processFrame();
 }
 
 void VisionModule::updateTransforms() {

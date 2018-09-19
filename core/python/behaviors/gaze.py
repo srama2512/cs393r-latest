@@ -100,6 +100,11 @@ class Playing(StateMachine):
             sys.stdout.flush()
 
             if ball.seen:
+                core.ledsC.frontRightEar(1)
+                core.ledsC.backRightEar(1)
+                core.ledsC.frontLeftEar(0)
+                core.ledsC.backLeftEar(0)
+
                 ballX = ball.imageCenterX
                 ballY = ball.imageCenterY
                 
@@ -136,6 +141,11 @@ class Playing(StateMachine):
                    commands.setHeadPan(pan, target_time=self.duration)
 
             else:
+                core.ledsC.frontRightEar(0)
+                core.ledsC.backRightEar(0)
+                core.ledsC.frontLeftEar(1)
+                core.ledsC.backLeftEar(1)
+
                 time_diff = (self.getTime() - self.prev_time) + 1e-1
 
                 if time_diff > self.time_ball_not_present_thresh:

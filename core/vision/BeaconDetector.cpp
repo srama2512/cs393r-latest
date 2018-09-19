@@ -115,6 +115,9 @@ bool BeaconDetector::validateUp(pair<Blob, Blob> &bblob) {
     int endX = min(width - 1, startX + dx);
     int endY = min(height - 1, startY + dy);
 
+    if(bblob.first.yi - startY < dy * 0.4)
+        return true;
+
     int tot_count = 1;
     map<Color, int> colorCount = {
         {c_BLUE, 0},

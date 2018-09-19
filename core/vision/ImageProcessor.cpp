@@ -266,8 +266,7 @@ void ImageProcessor::setCalibration(const RobotCalibration& calibration){
 }
 
 void ImageProcessor::processFrame(){
-  if(vblocks_.robot_state->WO_SELF == WO_TEAM_COACH && camera_ == Camera::BOTTOM) return;
-  if(camera_ == Camera::BOTTOM) return;
+  // if(vblocks_.robot_state->WO_SELF == WO_TEAM_COACH && camera_ == Camera::BOTTOM) return;
 
   tlog(30, "Process Frame camera %i", camera_);
 
@@ -280,14 +279,18 @@ void ImageProcessor::processFrame(){
   if(!color_segmenter_->classifyImage(color_table_)) return;
   calculateBlobs();
   detectBall();
-  detectGoal();
+  if(camera_ == Camera::BOTTOM) return;
 
+  detectGoal();
   beacon_detector_->findBeacons(detected_blobs);
 }
 
 void ImageProcessor::detectBall() {
-    BallCandidate* ballc = getBestBallCandidate();
     WorldObject* ball = &vblocks_.world_object->objects_[WO_BALL];
+    if(ball->seen)
+        return;
+
+    BallCandidate* ballc = getBestBallCandidate();
 
     if(ballc == NULL){
         // cout << "Ball not detected" << endl;
@@ -307,6 +310,7 @@ void ImageProcessor::detectBall() {
     // cout << "Ball detected at: " << ballc->centerX << "," << ballc->centerY << endl;
     // cout << "Ball pan: " << ball->visionBearing << "   Ball tilt: " << ball->visionElevation << endl;
     // cout << "Ball distance: " << ball->visionDistance << endl << endl;
+
     ball->seen = true;
 
     if(camera_ == Camera::BOTTOM)
@@ -409,7 +413,7 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
 
         double sideRatio = double(orangeBlobs[i].dx) / (orangeBlobs[i].dy);
         // cout << sideRatio << endl;
-        if (sideRatio < 0.6 || sideRatio > 1.4) {
+        if (camera_ == Camera::TOP && (sideRatio < 0.6 || sideRatio > 1.4)) {
           // std::cout << "Skipping due to side ratio: " << i << " " << sideRatio << endl;
           // cout << "skipping" << endl;
           continue;
@@ -418,14 +422,16 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
         // area ratio
         double rectArea = (orangeBlobs[i].dx) * (orangeBlobs[i].dy);
         double density = (orangeBlobs[i].lpCount / rectArea);
-        // cout << areaRatio << endl;
+
         if (density < 0.5) {
-          // std::cout << "Skipping due to area ratio: " << i << " " << areaRatio << endl;
+          // std::cout << "Skipping due to density: " << i << " " << density << endl;
           // cout << "skipping" << endl;
           continue;
         }
 
-        if (rectArea > 1600)
+        int BALL_MAX_AREA_THRESHOLD = camera_ == Camera::BOTTOM ? iparams_.size : 1600;
+
+        if (rectArea > BALL_MAX_AREA_THRESHOLD)
             continue;
 
         // filter out candidate if not on green ground
