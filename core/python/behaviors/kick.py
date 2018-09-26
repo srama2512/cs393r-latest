@@ -38,6 +38,7 @@ class Playing(StateMachine):
             self.d_threshold = d_threshold
 
         def run(self):
+            print('===> WalkToTarget: entered run!')
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
 
             if ball.seen:
