@@ -181,7 +181,7 @@ void MotionCore::processMotionFrame() {
     cout << "Processing kick request" << endl;
     kick_->processFrame();
   }
-  else if (walk_request_->motion_ == WalkRequestBlock::WALK_TO_TARGET){
+  else if (walk_request_->walk_to_target_ == true){
     cout << "Processing motion request" << endl;
     motion_->processFrame();
   }
