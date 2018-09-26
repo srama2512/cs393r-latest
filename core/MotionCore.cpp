@@ -176,10 +176,15 @@ void MotionCore::processMotionFrame() {
   }
 
   // kicks need to be before walk, so that they can change the walk request
-  if (use_com_kick_)
+  // cout << "Walk motion_" << walk_request_->motion_  << endl;
+  if (kick_request_->kick_type_ == Kick::STRAIGHT || kick_request_->kick_running_ == true){
+    cout << "Processing kick request" << endl;
     kick_->processFrame();
-  else
+  }
+  else if (walk_request_->motion_ == WalkRequestBlock::WALK_TO_TARGET){
+    cout << "Processing motion request" << endl;
     motion_->processFrame();
+  }
 
 
   if (walk_ != NULL) {

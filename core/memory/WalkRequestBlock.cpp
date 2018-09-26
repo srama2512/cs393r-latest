@@ -145,7 +145,8 @@ void WalkRequestBlock::setOdometryOffsets(float fwd, float side, float turn) {
 
 void WalkRequestBlock::setWalkTarget(float relx, float rely, float relang, bool pedantic) {
   new_command_ = true;
-  motion_ = WALK;
+  cout << "setWalkTarget" << endl;
+  motion_ = WALK_TO_TARGET;
   walk_to_target_ = true;
   rotate_around_target_ = false;
   target_point_.translation.x = relx;

@@ -90,7 +90,8 @@ void RSWalkModule2014::processFrame() {
       body.speed = walk_params_->main_params_.speed;
 
   } else if (walk_request_->motion_ == WalkRequestBlock::NONE or
-             walk_request_->motion_ == WalkRequestBlock::WAIT) {
+             walk_request_->motion_ == WalkRequestBlock::WAIT or
+             walk_request_->motion_ == WalkRequestBlock::WALK_TO_TARGET) {
     body.actionType = ActionCommand::Body::NONE;
   } else {
     // Default to tall straight stand

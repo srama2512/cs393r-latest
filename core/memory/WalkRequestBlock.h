@@ -25,6 +25,7 @@ DECLARE_INTERNAL_SCHEMA(struct WalkRequestBlock : public MemoryBlock {
       STAND_STRAIGHT,
       LINE_UP,
       STAND_PENALTY,
+      WALK_TO_TARGET,
       NUM_OF_MOTIONS
       );
 

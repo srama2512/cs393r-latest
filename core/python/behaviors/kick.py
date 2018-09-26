@@ -4,6 +4,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 
+import sys
+import core
 import memory
 import pose
 import commands
@@ -30,6 +32,21 @@ class Playing(StateMachine):
         def run(self):
             commands.setWalkVelocity(0.5, 0, 0)
 
+    class WalkToTarget(Node):
+        def run(self):
+            ball = memory.world_objects.getObjPtr(core.WO_BALL)
+
+            if ball.seen:
+                core.ledsC.frontRightEar(1)
+                core.ledsC.backRightEar(1)
+                core.ledsC.frontLeftEar(0)
+                core.ledsC.backLeftEar(0)
+
+            print('===> WalkToTarget: visionDistance: {}   visionBearing: {}'.format(ball.visionDistance, ball.visionBearing))
+            memory.walk_request.setWalkTarget(ball.visionDistance, 0.0, ball.visionBearing, False)
+            print('Calling walk to target')
+            sys.stdout.flush()
+
     class Off(Node):
         def run(self):
             commands.setStiffness(cfgstiff.Zero)
@@ -38,5 +55,6 @@ class Playing(StateMachine):
                 self.finish()
 
     def setup(self):
-        self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
-                   C, pose.Sit(), C, self.Off())
+        self.trans(self.WalkToTarget(), C)
+        #self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
+        #           C, pose.Sit(), C, self.Off())

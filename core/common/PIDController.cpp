@@ -30,6 +30,13 @@ float PIDController::update(float current, float target) {
     cumulative_error_ += current_error_;
 
   float res = cp_ * current_error_ + ci_ * cumulative_error_ + cd_ * (current_error_ - previous_error_);
+  cout << "===> PIDController: Raw res values: " << res << endl;
+  if (fabs(res) > 1.0) {
+    if (res > 0.0)
+      res = 1.0;
+    else
+      res = -1.0;
+  }
   //std::cout << "curr: " << RAD_T_DEG * current << " tar: " << RAD_T_DEG * target << " res: " << RAD_T_DEG * (current + res) << std::endl;
   return res;
 }
