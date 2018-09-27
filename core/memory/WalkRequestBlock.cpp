@@ -153,6 +153,15 @@ void WalkRequestBlock::setWalkTarget(float relx, float rely, float relang, bool 
   target_point_.translation.y = rely;
   target_point_.rotation = relang;
   pedantic_walk_ = pedantic;
+  percentage_speed_ = true;
+
+  perform_kick_ = false;
+  kick_heading_ = 0;
+  kick_distance_ = 3000;
+  kick_with_left_ = false;
+  step_into_kick_ = false;
+  rotate_distance_ = 0;
+  rotate_heading_ = 0;
 }
 
 void WalkRequestBlock::setKickStepParams(int type, const Pose2D &preStep, const Pose2D &step, float refX) {

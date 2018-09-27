@@ -24,3 +24,5 @@ logs*
 bin/
 build/
 lib/
+data/.utnaotoolrc.bak
+data/utnaotoolrc
