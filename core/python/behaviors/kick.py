@@ -213,6 +213,11 @@ class Playing(StateMachine):
                 memory.speech.say("turned off stiffness")
                 self.finish()
 
+    class Unstiffen(Node):
+        def run(self):
+            memory.walk_request.noWalk()
+            commands.setStiffness(cfgstiff.RightLegOffRestWalk)
+
     def setup(self):
         walk_to_target = self.WalkToTarget()
         stand = self.Stand()
@@ -223,8 +228,10 @@ class Playing(StateMachine):
         leftSearch = self.SearchForBall(75, 0, 4.0)
         rightSearch = self.SearchForBall(-75, 0, 4.0)
 
-        self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
+        # self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
 
         #self.trans(self.PositionToDribble(), C)
-        #self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
-        #           C, pose.Sit(), C, self.Off())
+        self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
+                  C, pose.Sit(), C, self.Off())
+
+        # self.trans(self.Stand(), C, self.Unstiffen(), C)
