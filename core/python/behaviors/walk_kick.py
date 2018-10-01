@@ -39,5 +39,7 @@ class Playing(StateMachine):
 
     def setup(self):
         walk = self.Walk()
-        self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
-                   C, walk, T(5.0), self.Stand(), C, pose.Sit(), C, self.Off())
+        # self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
+        #            C, walk, T(5.0), self.Stand(), C, pose.Sit(), C, self.Off())
+
+        self.trans(pose.Sit(), C, self.Off())

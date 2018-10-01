@@ -43,7 +43,7 @@ void KickModule::start() {
   cache_.kick_request->kick_running_ = true;
   keyframe_ = 0;
   frames_ = 0;
-  auto file = cache_.memory->data_path_ + "/kicks/default.yaml";
+  auto file = cache_.memory->data_path_ + "/kicks/new.yaml";
   #ifdef HACK
   sequence_ = new KeyframeSequence();
   printf("Loading kick sequence from '%s'...", file.c_str());
