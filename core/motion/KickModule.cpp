@@ -11,7 +11,7 @@
 
 #define JOINT_EPSILON (3.f * DEG_T_RAD)
 #define DEBUG false
-#define HACK
+// #define HACK
 
 KickModule::KickModule() : state_(Finished), sequence_(NULL) { }
 

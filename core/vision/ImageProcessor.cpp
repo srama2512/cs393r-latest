@@ -360,7 +360,7 @@ void ImageProcessor::findGoal(int& imageX, int& imageY) {
         // cout << "Goal detected at: " << blueBlobs[0].avgX << "\t" << blueBlobs[0].yf << endl;
         double rectArea = (blueBlobs[0].dx) * (blueBlobs[0].dy);
         double density = (blueBlobs[0].lpCount / rectArea);
-        if (density > 0.7) {
+        if (density > 0.4) {
             imageX = blueBlobs[0].avgX;
             imageY = blueBlobs[0].yf;
         }

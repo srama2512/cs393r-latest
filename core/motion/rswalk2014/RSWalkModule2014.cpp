@@ -74,14 +74,14 @@ void RSWalkModule2014::processFrame() {
   body.bend = 1;
 
   DEBUG_PRINT("Requested: ", WalkRequestBlock::getName(walk_request_->motion_), "", "");
-  cout << "===> RSWalkModule2014::processFrame(): Requested: " << WalkRequestBlock::getName(walk_request_->motion_) << endl;
+  // cout << "===> RSWalkModule2014::processFrame(): Requested: " << WalkRequestBlock::getName(walk_request_->motion_) << endl;
   if (walk_request_->motion_ == WalkRequestBlock::STAND) {
     // Do nothing for bent-leg stand
   } else if (walk_request_->motion_ == WalkRequestBlock::STAND_STRAIGHT) {
     body.power = 0.4;
     body.bend = 0;
   } else if (walk_request_->motion_ == WalkRequestBlock::WALK) {
-    cout << "===> RSWalkModule2014::processFrame(): walk speed:" << walk_request_->speed_.translation.x << " " << walk_request_->speed_.translation.y << " " << walk_request_->speed_.rotation << endl;
+    // cout << "===> RSWalkModule2014::processFrame(): walk speed:" << walk_request_->speed_.translation.x << " " << walk_request_->speed_.translation.y << " " << walk_request_->speed_.rotation << endl;
     body.forward = walk_request_->speed_.translation.x;
     body.left = walk_request_->speed_.translation.y;
     body.turn = walk_request_->speed_.rotation;
