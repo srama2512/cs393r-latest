@@ -11,7 +11,7 @@
 
 #define JOINT_EPSILON (3.f * DEG_T_RAD)
 #define DEBUG false
-// #define HACK
+#define HACK
 
 KickModule::KickModule() : state_(Finished), sequence_(NULL) { }
 
@@ -110,7 +110,7 @@ void KickModule::processFrame() {
 
 
 void KickModule::initStiffness() {
-  std::cout << "init stiffness!" << std::endl;
+  // std::cout << "init stiffness!" << std::endl;
   for (int i=0; i < NUM_JOINTS; i++)
     cache_.joint_command->stiffness_[i] = 1.0;
   cache_.joint_command->send_stiffness_ = true;
