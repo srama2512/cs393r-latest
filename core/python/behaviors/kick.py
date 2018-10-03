@@ -64,7 +64,6 @@ class Playing(LoopingStateMachine):
                 if self.getTime() - self.last_seen > 2.0:
                     self.postFailure()
 
-
     class HeadPos(Node):
         """Changes the head pos to the desired pan and tilt"""
         def __init__(self, pan=0, tilt=0, duration=2.0):
@@ -81,7 +80,7 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=190.0, ball_y_offset=-25.0, ball_y_threshold=10.0, vel_x=0.6, vel_y=0.6, omega=0.1):
+        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=160.0, ball_y_offset=-30.0, ball_y_threshold=10.0, vel_x=0.6, vel_y=0.6, omega=0.1):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.ball_x_threshold = ball_x_threshold
@@ -91,6 +90,8 @@ class Playing(LoopingStateMachine):
             self.vel_y = vel_y
             self.omega = omega
             self.last_seen = 0
+            self.ptk_ready = False
+            self.last_ptk_ready = 0.0
 
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
@@ -113,7 +114,16 @@ class Playing(LoopingStateMachine):
                                                                                                                                                ball_side_dist,
                                                                                                                                                ball_fwd_dist))
                     sys.stdout.flush()
-                    self.finish()
+                    
+                    if not self.ptk_ready:
+                        self.ptk_ready = True
+                        self.last_ptk_ready = self.getTime()
+                        commands.setWalkVelocity(0.0, 0.0, 0.0)
+                    else:
+                        if self.getTime() - self.last_ptk_ready > 0.1:
+                            self.finish()
+                else:
+                    self.ptk_ready = False
 
                 if goal.visionBearing < -self.goal_b_threshold:
                     omega = -self.omega
@@ -137,15 +147,17 @@ class Playing(LoopingStateMachine):
                     vel_x = 0.0
 
                 self.last_seen = self.getTime()
-                print('===> PositionToKick: Walk velocities: {}, {}, {}'.format(vel_x, vel_y, omega))
-                commands.setWalkVelocity(vel_x, vel_y, omega)
+                
+                if not self.ptk_ready:
+                    print('===> PositionToKick: Walk velocities: {}, {}, {}'.format(vel_x, vel_y, omega))
+                    commands.setWalkVelocity(vel_x, vel_y, omega)
             else:
                 print('===> PositionToKick: Not seeing either the ball (or) the goal')
                 if self.getTime() - self.last_seen > 2.0:
                     self.postFailure()
 
     class Dribble(Node):
-        def __init__(self, goal_b_threshold=0.1, goal_x_threshold=800.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=1.0, vel_y=1.0, omega=0.1):
+        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=800.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
             super(Playing.Dribble, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.goal_x_threshold = goal_x_threshold
@@ -225,6 +237,18 @@ class Playing(LoopingStateMachine):
                 if self.getTime() - self.last_seen > 2.0:
                     self.postFailure()
 
+    class RotateBody(Node):
+        def __init__(self):
+            super(Playing.RotateBody, self).__init__()
+
+        def run(self):
+            ball = memory.world_objects.getObjPtr(core.WO_BALL)
+            if ball.seen:
+                self.finish()
+            else:
+                commands.setHeadPanTilt(pan=0., tilt=0., time=2.0)
+                commands.setWalkVelocity(0., 0., 0.3)
+
     class SearchForBall(Node):
         def __init__(self, pan=0, tilt=0, duration=2.0):
             """
@@ -246,7 +270,7 @@ class Playing(LoopingStateMachine):
             if self.getTime() > self.duration:
                 print ('Finished search')
                 sys.stdout.flush()
-                self.finish()
+                self.postFailure()
 
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
@@ -302,9 +326,8 @@ class Playing(LoopingStateMachine):
                 self.last_seen = self.getTime()
             else:
                 if self.getTime() - self.last_seen > 2.0:
+                    commands.setWalkVelocity(0.0, 0.0, 0.0)
                     self.postFailure()
-                # TODO: Revert to search
-
 
     class Off(Node):
         def run(self):
@@ -329,20 +352,25 @@ class Playing(LoopingStateMachine):
         lookatball = self.LookAtBall(delta_pan=12, duration=0.2)
         leftSearch = self.SearchForBall(75, 0, 4.0)
         rightSearch = self.SearchForBall(-75, 0, 4.0)
+        rotateBody = self.RotateBody()
 
         # self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
         
         self.add_transition(stand, C, center)
         self.add_transition(center, T(4.0), leftSearch)
         self.add_transition(leftSearch, C, rightSearch)
+        self.add_transition(leftSearch, F, rightSearch)
         self.add_transition(rightSearch, C, lookatball)
+        self.add_transition(rightSearch, F, rotateBody)
+        self.add_transition(rotateBody, C, lookatball)
         self.add_transition(lookatball, C, walk_to_target)
         self.add_transition(lookatball, F, center)
         self.add_transition(walk_to_target, C, dribble)
         self.add_transition(walk_to_target, F, center)
         self.add_transition(dribble, C, ptk)
-        self.add_transition(dribble, F, walk_to_target)
+        self.add_transition(dribble, F, center)
         self.add_transition(ptk, C, stand_at_ball)
+        self.add_transition(ptk, F, dribble)
         self.add_transition(stand_at_ball, C, kick)
         self.add_transition(kick, C, stand)
 
