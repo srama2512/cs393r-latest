@@ -156,22 +156,31 @@ class Playing(LoopingStateMachine):
             self.omega = omega
             self.last_seen = 0
             self.dribble = False
+            self.goal_not_seen = False
 
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
             goal = memory.world_objects.getObjPtr(core.WO_UNKNOWN_GOAL)
 
-            if goal.seen and ball.seen:
-
+            # if goal.seen and ball.seen:
+            if ball.seen:
                 ball_side_dist = ball.visionDistance * math.sin(ball.visionBearing)
                 ball_fwd_dist = ball.visionDistance * math.cos(ball.visionBearing)
-                goal_fwd_dist = goal.visionDistance * math.cos(goal.visionBearing)
-                print('===> Dribble: visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(goal.visionDistance, 
-                                                                                                                                               goal.visionBearing, 
+                #sys.stdout.flush()
+                if goal.seen:
+                    self.goal_not_seen = False
+                    goal_vision_bearing = goal.visionBearing
+                    goal_fwd_dist = goal.visionDistance * math.cos(goal.visionBearing)
+                else:
+                    self.goal_not_seen = True
+                    goal_vision_bearing = 10.0 # self.goal_b_threshold + 1.0
+                    goal_fwd_dist = self.goal_x_threshold + 1.0
+
+                print('===> Dribble: visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(goal_fwd_dist, 
+                                                                                                                                               goal_vision_bearing, 
                                                                                                                                                ball_side_dist,
                                                                                                                                                ball_fwd_dist))
-                #sys.stdout.flush()
-                if abs(goal.visionBearing) < self.goal_b_threshold and abs(ball_side_dist) < self.ball_y_threshold:
+                if abs(goal_vision_bearing) < self.goal_b_threshold and abs(ball_side_dist) < self.ball_y_threshold:
                     print('===> Dribble: Reached within bearing of the goal and distance of the ball!')
                     self.dribble = True
 
@@ -180,9 +189,9 @@ class Playing(LoopingStateMachine):
                         sys.stdout.flush()
                         self.finish()
 
-                if goal.visionBearing < -self.goal_b_threshold:
+                if goal_vision_bearing < -self.goal_b_threshold:
                     omega = -self.omega
-                elif goal.visionBearing > self.goal_b_threshold:
+                elif goal_vision_bearing > self.goal_b_threshold:
                     omega = self.omega
                 else:
                     omega = 0.0
@@ -207,9 +216,12 @@ class Playing(LoopingStateMachine):
 
                 self.last_seen = self.getTime()
                 self.dribble = False
+                if self.goal_not_seen:
+                    omega *= 2
                 commands.setWalkVelocity(vel_x, vel_y, omega)
+
             else:
-                print('===> Dribble: Not seeing either the ball (or) the goal')
+                print('===> Dribble: Not seeing the ball')
                 if self.getTime() - self.last_seen > 2.0:
                     self.postFailure()
 
@@ -319,6 +331,7 @@ class Playing(LoopingStateMachine):
         rightSearch = self.SearchForBall(-75, 0, 4.0)
 
         # self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
+        
         self.add_transition(stand, C, center)
         self.add_transition(center, T(4.0), leftSearch)
         self.add_transition(leftSearch, C, rightSearch)
@@ -334,7 +347,7 @@ class Playing(LoopingStateMachine):
         self.add_transition(kick, C, stand)
 
         #self.trans(self.PositionToKick(), C)
-        #self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
-        #          C, pose.Sit(), C, self.Off())
+        # self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
+        #           C, pose.Sit(), C, self.Off())
 
         # self.trans(self.Stand(), C, self.Unstiffen(), C)
