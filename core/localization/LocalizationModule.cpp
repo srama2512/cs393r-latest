@@ -78,15 +78,31 @@ void LocalizationModule::movePlayer(const Point2D& position, float orientation) 
 
 void LocalizationModule::processFrame() {
   auto& ball = cache_.world_object->objects_[WO_BALL];
+  auto& ball_kf = cache_.world_object->objects_[WO_BALL_KF];
   auto& self = cache_.world_object->objects_[cache_.robot_state->WO_SELF];
 
   // Retrieve the robot's current location from localization memory
   // and store it back into world objects
   auto sloc = cache_.localization_mem->player_;
   self.loc = sloc;
-    
+  
+
   //TODO: modify this block to use your Kalman filter implementation
   if(ball.seen) {
+    double ball_x = ball.visionDistance * cos(ball.visionBearing);
+    double ball_y = ball.visionDistance * sin(ball.visionBearing);
+    
+    ball_x_kf.updateBelief({0.0, 0.0}, {ball_x}); 
+    ball_y_kf.updateBelief({0.0, 0.0}, {ball_y});
+
+    vector<double> smoothed_x_state = ball_x_kf.get_mu();
+    double smoothed_x = smoothed_x_state[0];
+    vector<double> smoothed_y_state = ball_y_kf.get_mu();
+    double smoothed_y = smoothed_y_state[0];
+
+    double smoothed_ball_bearing = atan2(smoothed_y, smoothed_x);
+    double smoothed_ball_distance = sqrt(pow(smoothed_x, 2) + pow(smoothed_y, 2));
+
     // Compute the relative position of the ball from vision readings
     auto relBall = Point2D::getPointFromPolar(ball.visionDistance, ball.visionBearing);
 
@@ -98,6 +114,9 @@ void LocalizationModule::processFrame() {
     ball.distance = ball.visionDistance;
     ball.bearing = ball.visionBearing;
     //ball.absVel = fill this in
+
+    ball_kf.distance = smoothed_ball_distance;
+    ball_kf.bearing = smoothed_ball_bearing;
 
     // Update the localization memory objects with localization calculations
     // so that they are drawn in the World window

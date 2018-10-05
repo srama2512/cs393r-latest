@@ -14,6 +14,7 @@
 #include <vision/structures/VisionParams.h>
 #include <unordered_map>
 #include <vector>
+#include <math/KalmanFilter.h>
 
 class BallDetector;
 class Classifier;

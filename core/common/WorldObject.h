@@ -145,6 +145,7 @@ ENUM(WorldObjectType,   // Types of objects
 
   NUM_WORLD_OBJS,
 
+  WO_BALL_KF,
   WO_INVALID
 );
 
