@@ -143,9 +143,9 @@ ENUM(WorldObjectType,   // Types of objects
   // cluster of robots
   WO_ROBOT_CLUSTER,
 
-  NUM_WORLD_OBJS,
-
   WO_BALL_KF,
+
+  NUM_WORLD_OBJS,
   WO_INVALID
 );
 

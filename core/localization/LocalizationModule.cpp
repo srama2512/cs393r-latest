@@ -8,6 +8,24 @@
 
 // Boilerplate
 LocalizationModule::LocalizationModule() : tlogger_(textlogger), pfilter_(new ParticleFilter(cache_, tlogger_)) {
+  ball_x_kf.set_A_matrix({{1.0, 2.0}, {0.0, 1.0}});
+  ball_y_kf.set_A_matrix({{1.0, 2.0}, {0.0, 1.0}});
+
+  ball_x_kf.set_R_matrix({{0.1, 0.0}, {0.0, 0.0}});
+  ball_y_kf.set_R_matrix({{0.1, 0.0}, {0.0, 0.0}});
+
+  ball_x_kf.set_Q_matrix({{0.1}});
+  ball_y_kf.set_Q_matrix({{0.1}});
+
+  ball_x_kf.set_sigma_matrix({{1.0, 0.0}, {0.0, 0.0}});
+  ball_y_kf.set_sigma_matrix({{1.0, 0.0}, {0.0, 0.0}});
+
+  prev_x = 0.0;
+  prev_y = 0.0;
+  prev_time = std::chrono::system_clock::now();
+  prev_vel_x = 0;
+  prev_vel_y = 0;
+
 }
 
 LocalizationModule::~LocalizationModule() {
@@ -92,13 +110,36 @@ void LocalizationModule::processFrame() {
     double ball_x = ball.visionDistance * cos(ball.visionBearing);
     double ball_y = ball.visionDistance * sin(ball.visionBearing);
     
-    ball_x_kf.updateBelief({0.0, 0.0}, {ball_x}); 
-    ball_y_kf.updateBelief({0.0, 0.0}, {ball_y});
+    auto curr_time = std::chrono::system_clock::now();
+    chrono::duration<double> diff = curr_time - prev_time;
+    double duration = diff.count();
+    prev_time = curr_time;
+
+    ball_x_kf.updateBelief({0.0}, {ball_x});
+    ball_y_kf.updateBelief({0.0}, {ball_y});
 
     vector<double> smoothed_x_state = ball_x_kf.get_mu();
     double smoothed_x = smoothed_x_state[0];
     vector<double> smoothed_y_state = ball_y_kf.get_mu();
     double smoothed_y = smoothed_y_state[0];
+
+    double vel_x = (smoothed_x - prev_x)/duration;
+    double vel_y = (smoothed_y - prev_y)/duration;
+
+    // printf("---> LM::pF x: %8.4f   y: %8.4f   vel_x: %8.4f   vel_y: %8.4f   dur: %8.4f\n", smoothed_x, smoothed_y, vel_x, vel_y, duration);
+
+    // cout << "---> LM::pF x: " << smoothed_x << " \ty: " << smoothed_y << " \tvel_x: " << vel_x << " \tvel_y: " << vel_y << "\tdur: " << duration << endl; 
+
+    prev_vel_x = vel_x;
+    prev_vel_y = vel_y;
+    prev_x = smoothed_x;
+    prev_y = smoothed_y;
+
+    vector<double> sigma_x = ball_x_kf.get_sigma();
+    vector<double> sigma_y = ball_y_kf.get_sigma();
+
+    ball_x_kf.set_A_matrix({{1.0, vel_x * duration}, {0.0, 0.0}});
+    ball_y_kf.set_A_matrix({{1.0, vel_y * duration}, {0.0, 0.0}});
 
     double smoothed_ball_bearing = atan2(smoothed_y, smoothed_x);
     double smoothed_ball_distance = sqrt(pow(smoothed_x, 2) + pow(smoothed_y, 2));
@@ -117,6 +158,7 @@ void LocalizationModule::processFrame() {
 
     ball_kf.distance = smoothed_ball_distance;
     ball_kf.bearing = smoothed_ball_bearing;
+    ball_kf.seen = true;
 
     // Update the localization memory objects with localization calculations
     // so that they are drawn in the World window
@@ -126,7 +168,14 @@ void LocalizationModule::processFrame() {
   } 
   //TODO: How do we handle not seeing the ball?
   else {
-    ball.distance = 10000.0f;
-    ball.bearing = 0.0f;
+    auto curr_time = std::chrono::system_clock::now();
+    chrono::duration<double> diff = curr_time - prev_time;
+    double duration = diff.count();
+    if(duration < 0.5) {
+      // extrapolate based on previous velocity estimate
+      double ball_x = prev_x + prev_vel_x * duration;
+      double ball_y = prev_y + prev_vel_y * duration;
+      //printf("---> Ball not seen. Predicting future B-) x: %8.4f   y: %8.4f   vel_x: %8.4f   vel_y: %8.4f   dur: %8.4f\n", ball_x, ball_y, prev_vel_x, prev_vel_y, duration);
+    } 
   }
 }

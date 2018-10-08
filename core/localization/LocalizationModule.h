@@ -5,7 +5,8 @@
 #include <localization/LocalizationParams.h>
 #include <math/KalmanFilter.h>
 #include <math.h>
-
+#include <chrono>
+ 
 class ParticleFilter;
 class Point2D;
 
@@ -30,6 +31,10 @@ class LocalizationModule : public Module {
     TextLogger*& tlogger_;
     LocalizationParams params_;
     ParticleFilter* pfilter_;
-    KalmanFilter ball_x_kf;
-    KalmanFilter ball_y_kf;
+    
+    KalmanFilter<2, 1, 1> ball_x_kf;
+    KalmanFilter<2, 1, 1> ball_y_kf;
+
+    double prev_x, prev_y, prev_vel_x, prev_vel_y;
+    std::chrono::time_point<std::chrono::system_clock> prev_time;
 };
