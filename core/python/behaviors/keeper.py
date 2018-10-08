@@ -12,6 +12,7 @@ import UTdebug
 import math
 import memory
 from memory import joint_commands
+from pose import BlockLeftStand, BlockRightStand, BlockCenterStand
 
 class Stand(Node):
     def run(self):
@@ -35,29 +36,6 @@ class HeadPos(Node):
         def run(self):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
-class BlockLeft(Node):
-    def run(self):
-        # joint_commands.setJointCommandDeg(core.LShoulderRoll, 20)
-        # joint_commands.setSendAllAngles(True)
-        print("Blocking left")
-
-
-
-class BlockRight(Node):
-    def run(self):
-        # joint_commands.setJointCommandDeg(core.RShoulderRoll, 20)
-        # joint_commands.setSendAllAngles(True)
-        print("Blocking right")
-
-
-class BlockCenter(Node):
-    def run(self):
-        # joint_commands.setJointCommandDeg(core.LShoulderPitch, -60)
-        # joint_commands.setJointCommandDeg(core.RShoulderPitch, -60)
-        # joint_commands.setSendAllAngles(True)
-        print("Blocking center")
-
-
 class Blocker(Node):
     def __init__(self):
         super(Blocker, self).__init__()
@@ -67,7 +45,7 @@ class Blocker(Node):
         self.vel_x = 0
         self.vel_y = 0
         self.beta = 0.0
-        self.delta_time = 0.3
+        self.delta_time = 0.5
         self.y_dist_thresh = 150
 
     def run(self):
@@ -77,7 +55,8 @@ class Blocker(Node):
         if ball.seen:
             ball_x = ball.distance * math.cos(ball.bearing)
             ball_y = ball.distance * math.sin(ball.bearing)
-            print('===> Keeper: Ball seen: ball_x: {:.3f}, ball_y: {:.3f}'.format(ball_x, ball_y))
+            print('===> Keeper: Ball seen: ball_x: {:.3f}, ball_y: {:.3f}  vel_x: {:.3f}  vel_y: {:.3f}'.format(ball_x, ball_y, self.vel_x, self.vel_y))
+
             duration = self.getTime() - self.prev_time + 1e-5
 
             vel_x = (ball_x - self.prev_x)/duration
@@ -105,16 +84,24 @@ class Blocker(Node):
                     choice = "center"
                 self.postSignal(choice)
 
+class ResetNode(Node):
+    def __init__(self, t_node):
+        super(ResetNode, self).__init__()
+        self.t_node = t_node
+
+    def run(self):
+        self.t_node.reset()
+        self.finish()
 
 class Playing(LoopingStateMachine):
     def setup(self):
         blocker = Blocker()
-        blocks = {"left": BlockLeft(),
-                  "right": BlockRight(),
-                  "center": BlockCenter()
+        blocks = {"left": BlockLeftStand(),
+                  "right": BlockRightStand(),
+                  "center": BlockCenterStand()
                   }
         stand = Stand()
         center = HeadPos(0, 0)
         for name in blocks:
             b = blocks[name]
-            self.add_transition(stand, C, blocker, S(name), b, T(1), blocker)
+            self.add_transition(stand, C, blocker, S(name), b, T(1), ResetNode(b), T(1), blocker, C, stand)

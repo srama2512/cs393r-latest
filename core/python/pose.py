@@ -207,3 +207,31 @@ class BlockLeft(Task):
       cfgpose.standingPose, 2.0
     ))
 
+class BlockLeftStand(Task):
+  def __init__(self, time = 3.0):
+    super(BlockLeftStand, self).__init__(time=time)
+    self.setChain([ PoseSequence(
+      cfgpose.raiseLeftArmSide, 0.5), 
+      Stand()
+    ])
+      
+
+
+class BlockRightStand(Task):
+   def __init__(self, time = 3.0):
+    super(BlockRightStand, self).__init__(time=time)
+    self.setChain([ PoseSequence(
+      cfgpose.raiseRightArmSide, 0.5), 
+      Stand()
+    ])
+      
+
+class BlockCenterStand(Task):
+   def __init__(self, time = 3.0):
+    super(BlockCenterStand, self).__init__(time=time)
+    self.setChain([ PoseSequence(
+      cfgpose.raiseArmsForward, 0.5), 
+      Stand()
+    ])
+      
+

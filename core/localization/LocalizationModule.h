@@ -6,7 +6,7 @@
 #include <math/KalmanFilter.h>
 #include <math.h>
 #include <chrono>
- 
+
 class ParticleFilter;
 class Point2D;
 
@@ -36,5 +36,7 @@ class LocalizationModule : public Module {
     KalmanFilter<2, 1, 1> ball_y_kf;
 
     double prev_x, prev_y, prev_vel_x, prev_vel_y;
+    double lambda_fric;
+    double G_ACC;
     std::chrono::time_point<std::chrono::system_clock> prev_time;
 };

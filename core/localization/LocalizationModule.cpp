@@ -6,6 +6,9 @@
 #include <localization/ParticleFilter.h>
 #include <localization/Logging.h>
 
+inline double signum(double val) {
+  return val > 0 ? 1.0 : -1.0;
+}
 // Boilerplate
 LocalizationModule::LocalizationModule() : tlogger_(textlogger), pfilter_(new ParticleFilter(cache_, tlogger_)) {
   ball_x_kf.set_A_matrix({{1.0, 2.0}, {0.0, 1.0}});
@@ -25,6 +28,8 @@ LocalizationModule::LocalizationModule() : tlogger_(textlogger), pfilter_(new Pa
   prev_time = std::chrono::system_clock::now();
   prev_vel_x = 0;
   prev_vel_y = 0;
+  lambda_fric = 0.2;
+  G_ACC = 9806;
 
 }
 
@@ -138,8 +143,8 @@ void LocalizationModule::processFrame() {
     vector<double> sigma_x = ball_x_kf.get_sigma();
     vector<double> sigma_y = ball_y_kf.get_sigma();
 
-    ball_x_kf.set_A_matrix({{1.0, vel_x * duration}, {0.0, 0.0}});
-    ball_y_kf.set_A_matrix({{1.0, vel_y * duration}, {0.0, 0.0}});
+    ball_x_kf.set_A_matrix({{1.0, vel_x * duration - 0.5 * signum(vel_x) * G_ACC * lambda_fric * pow(duration, 2)}, {0.0, 0.0}});
+    ball_y_kf.set_A_matrix({{1.0, vel_y * duration - 0.5 * signum(vel_y) * G_ACC * lambda_fric * pow(duration, 2)}, {0.0, 0.0}});
 
     double smoothed_ball_bearing = atan2(smoothed_y, smoothed_x);
     double smoothed_ball_distance = sqrt(pow(smoothed_x, 2) + pow(smoothed_y, 2));
