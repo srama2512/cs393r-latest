@@ -84,7 +84,7 @@ public:
 	    duration = diff.count();
 	    prev_time = curr_time;
 
-	    if(duration > 0.5) {
+	    if(duration > 1.0) {
 	    	smooth_distance = -1.0;
 	    	smooth_bearing = -1.0;
 	    	return;
