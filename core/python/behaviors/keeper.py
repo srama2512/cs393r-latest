@@ -46,7 +46,7 @@ class Blocker(Node):
         self.vel_y = 0
         self.beta = 0.5
         self.delta_time = 0.75
-        self.y_dist_thresh = 90
+        self.y_dist_thresh = 100
         self.y_max_dist_thresh = 370
 
     def reset(self):
@@ -120,5 +120,5 @@ class Playing(StateMachine):
         for name in blocks:
             b = blocks[name]
             # self.add_transition(stand, C, blocker, S(name), b, T(1), ResetNode(b), T(1), blocker, C, stand)
-            self.add_transition(stand, C, blocker, S(name), b, T(6), blocker, C, stand)
+            self.add_transition(stand, C, blocker, S(name), b, T(2), blocker, C, stand)
 
