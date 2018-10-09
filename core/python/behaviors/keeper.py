@@ -45,7 +45,7 @@ class Blocker(Node):
         self.vel_x = 0
         self.vel_y = 0
         self.beta = 0.0
-        self.delta_time = 0.5
+        self.delta_time = 0.3
         self.y_dist_thresh = 150
 
     def run(self):
