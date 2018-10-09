@@ -208,30 +208,63 @@ class BlockLeft(Task):
     ))
 
 class BlockLeftStand(Task):
-  def __init__(self, time = 3.0):
+  def __init__(self, time = 1.0):
     super(BlockLeftStand, self).__init__(time=time)
-    self.setChain([ PoseSequence(
-      cfgpose.raiseLeftArmSide, 0.5), 
-      Stand()
-    ])
+
+    self.state = state_machine.SimpleStateMachine('init', 'put_down', 'finish')
+
+  def run(self):
+    st = self.state
+
+    if st.inState(st.init):
+      st.transition(st.put_down)
+      return ToPose(cfgpose.raiseLeftArmSide, 0.5)
+    elif st.inState(st.put_down):
+      st.transition(st.finish)
+      return ToPose(cfgpose.bothArmsDown, 0.5)
+    elif st.inState(st.finish):
+      st.transition(st.init)
+      self.finish()
       
 
 
 class BlockRightStand(Task):
-   def __init__(self, time = 3.0):
+  def __init__(self, time = 1.0):
     super(BlockRightStand, self).__init__(time=time)
-    self.setChain([ PoseSequence(
-      cfgpose.raiseRightArmSide, 0.5), 
-      Stand()
-    ])
+
+    self.state = state_machine.SimpleStateMachine('init', 'put_down', 'finish')
+
+  def run(self):
+    st = self.state
+
+    if st.inState(st.init):
+      st.transition(st.put_down)
+      return ToPose(cfgpose.raiseRightArmSide, 0.5)
+    elif st.inState(st.put_down):
+      st.transition(st.finish)
+      return ToPose(cfgpose.bothArmsDown, 0.5)
+    elif st.inState(st.finish):
+      st.transition(st.init)
+      self.finish()
       
 
 class BlockCenterStand(Task):
-   def __init__(self, time = 3.0):
+  def __init__(self, time = 1.0):
     super(BlockCenterStand, self).__init__(time=time)
-    self.setChain([ PoseSequence(
-      cfgpose.raiseArmsForward, 0.5), 
-      Stand()
-    ])
+
+    self.state = state_machine.SimpleStateMachine('init', 'put_down', 'finish')
+
+  def run(self):
+    st = self.state
+
+    if st.inState(st.init):
+      st.transition(st.put_down)
+      return ToPose(cfgpose.raiseArmsForward, 0.5)
+    elif st.inState(st.put_down):
+      st.transition(st.finish)
+      return ToPose(cfgpose.bothArmsDown, 0.5)
+    elif st.inState(st.finish):
+      st.transition(st.init)
+      self.finish()
       
 

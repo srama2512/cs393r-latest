@@ -85,8 +85,10 @@ void ExtendedKalmanFilter<N, K, A>::updateBelief(std::vector<double> u_t_, std::
 	Eigen::Map<Eigen::Matrix<double, A, 1> > u_t(u_t_.data(), u_t_.size());
 	Eigen::Map<Eigen::Matrix<double, K, 1> > z_t(z_t_.data(), z_t_.size());
 
+	jac_prediction();
 	mean_prediction(u_t);
 	cov_prediction();
+	jac_correction();
 	correction(z_t);
 }
 

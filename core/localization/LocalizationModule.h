@@ -34,11 +34,5 @@ class LocalizationModule : public Module {
     LocalizationParams params_;
     ParticleFilter* pfilter_;
     
-    BallTrackerKalmanFilter<2, 1, 1> ball_x_kf;
-    BallTrackerKalmanFilter<2, 1, 1> ball_y_kf;
-
-    double prev_x, prev_y, prev_vel_x, prev_vel_y;
-    double lambda_fric;
-    double G_ACC;
-    std::chrono::time_point<std::chrono::system_clock> prev_time;
+    BallTrackerKalmanFilter ball_kf;
 };
