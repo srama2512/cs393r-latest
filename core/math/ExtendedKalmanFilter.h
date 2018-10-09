@@ -39,10 +39,10 @@ public:
 	void set_Q_matrix(std::vector<std::vector<double> > Q_mat);
 	void set_sigma_matrix(std::vector<std::vector<double> > sigma_mat);
 
-	virtual void mean_prediction(Eigen::Matrix<double, A, 1> u_t);
-	virtual Eigen::Matrix<double, K, 1> mean_measure();
-	virtual void jac_prediction();
-	virtual void jac_correction();
+	virtual void mean_prediction(Eigen::Matrix<double, A, 1> u_t) = 0;
+	virtual Eigen::Matrix<double, K, 1> mean_measure() = 0;
+	virtual void jac_prediction() = 0;
+	virtual void jac_correction() = 0;
 	
 };
 

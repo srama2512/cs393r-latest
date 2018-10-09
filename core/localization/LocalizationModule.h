@@ -3,8 +3,8 @@
 #include <Module.h>
 #include <memory/MemoryCache.h>
 #include <localization/LocalizationParams.h>
-#include <math/KalmanFilter.h>
-#include <math/ExtendedKalmanFilter.h>
+// #include <math/KalmanFilter.h>
+// #include <math/ExtendedKalmanFilter.h>
 #include <localization/BallTrackerKalmanFilter.h>
 #include <math.h>
 #include <chrono>
@@ -34,8 +34,8 @@ class LocalizationModule : public Module {
     LocalizationParams params_;
     ParticleFilter* pfilter_;
     
-    BallTrackerKalmanFilter<2,1,1> ball_x_kf;
-    BallTrackerKalmanFilter<2,1,1> ball_y_kf;
+    BallTrackerKalmanFilter<2, 1, 1> ball_x_kf;
+    BallTrackerKalmanFilter<2, 1, 1> ball_y_kf;
 
     double prev_x, prev_y, prev_vel_x, prev_vel_y;
     double lambda_fric;
