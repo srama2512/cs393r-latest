@@ -26,14 +26,14 @@ private:
 public:
 
 	BallTrackerKalmanFilter() {
-		momentum = 0.95;
+		momentum = 0.9;
 		lambda_friction = 0.2;
 		vel_x = 0.0;
 		vel_y = 0.0;
 		prev_time = std::chrono::system_clock::now();
 
 		this->set_R_matrix({{1000.0, 0.0}, {0.0, 1000.0}});
-		this->set_Q_matrix({{10.0, 0.0}, {0.0, 0.1}});
+		this->set_Q_matrix({{1000.0, 0.0}, {0.0, 0.001}});
 		this->sigma_t = Eigen::Matrix<double, STATE_DIM, STATE_DIM>::Identity();
 	}
 
@@ -84,7 +84,7 @@ public:
 	    duration = diff.count();
 	    prev_time = curr_time;
 
-	    if(duration > 0.1) {
+	    if(duration > 0.5) {
 	    	smooth_distance = -1.0;
 	    	smooth_bearing = -1.0;
 	    	return;
@@ -108,7 +108,7 @@ public:
 		smooth_distance = sqrt(smoothed_x * smoothed_x + smoothed_y * smoothed_y);
 		smooth_bearing = atan2(smoothed_y, smoothed_x);
 
-		printf("---> LM::pF x: %8.4f   y: %8.4f   vel_x: %8.4f   vel_y: %8.4f   dur: %8.4f\n", smoothed_x, smoothed_y, vel_x, vel_y, duration);
+		// printf("---> LM::pF x: %8.4f   y: %8.4f   vel_x: %8.4f   vel_y: %8.4f   dur: %8.4f\n", smoothed_x, smoothed_y, vel_x, vel_y, duration);
 	}
 };
 

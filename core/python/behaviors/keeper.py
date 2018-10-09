@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import core
 import commands
 import mem_objects
-from state_machine import Node, S, T, F, C, LoopingStateMachine
+from state_machine import Node, S, T, F, C, LoopingStateMachine, StateMachine
 import UTdebug
 import math
 import memory
@@ -44,9 +44,19 @@ class Blocker(Node):
         self.prev_time = self.getTime()
         self.vel_x = 0
         self.vel_y = 0
-        self.beta = 0.0
-        self.delta_time = 1.0
-        self.y_dist_thresh = 150
+        self.beta = 0.5
+        self.delta_time = 0.75
+        self.y_dist_thresh = 90
+        self.y_max_dist_thresh = 370
+
+    def reset(self):
+        super(Blocker, self).reset()
+
+        self.prev_x = 0.0
+        self.prev_y = 0.0
+        self.prev_time = self.getTime()
+        self.vel_x = 0.0
+        self.vel_y = 0.0
 
     def run(self):
         ball = mem_objects.world_objects[core.WO_BALL_KF]
@@ -55,12 +65,12 @@ class Blocker(Node):
         if ball.seen:
             ball_x = ball.distance * math.cos(ball.bearing)
             ball_y = ball.distance * math.sin(ball.bearing)
-            print('===> Keeper: Ball seen: ball_x: {:.3f}, ball_y: {:.3f}  vel_x: {:.3f}  vel_y: {:.3f}'.format(ball_x, ball_y, self.vel_x, self.vel_y))
 
             duration = self.getTime() - self.prev_time + 1e-5
+            print('===> Keeper: Ball seen: duration: {:.3f}, prev_x: {:.3f}, prev_y: {:.3f}, ball_x: {:.3f}, ball_y: {:.3f}  vel_x: {:.3f}  vel_y: {:.3f}'.format(duration, self.prev_x, self.prev_y, ball_x, ball_y, self.vel_x, self.vel_y))
 
-            vel_x = (ball_x - self.prev_x)/duration
-            vel_y = (ball_y - self.prev_y)/duration
+            vel_x = (ball_x - self.prev_x) / duration
+            vel_y = (ball_y - self.prev_y) / duration
 
             self.vel_x = self.beta * self.vel_x + (1-self.beta) * vel_x
             self.vel_y = self.beta * self.vel_y + (1-self.beta) * vel_y
@@ -76,13 +86,18 @@ class Blocker(Node):
                 y_pred = time_to_reach * self.vel_y + ball_y
                 print('Predicted y at end: {}'.format(y_pred))
 
-                if y_pred > self.y_dist_thresh:
-                    choice = "left"
-                elif y_pred < -self.y_dist_thresh:
-                    choice = "right"
-                else:
-                    choice = "center"
-                self.postSignal(choice)
+                if abs(y_pred) < self.y_max_dist_thresh:
+
+                    if y_pred > self.y_dist_thresh:
+                        choice = "left"
+                        print ('\n\n\n\n<----------------- LEFT\n\n\n\n')
+                    elif y_pred < -self.y_dist_thresh:
+                        choice = "right"
+                        print ('\n\n\n\n                                      RIGHT ----------------->\n\n\n\n')
+                    else:
+                        choice = "center"
+                        print ('\n\n\n\n<------------------------- CENTER --------------------------->\n\n\n\n')
+                    self.postSignal(choice)
 
 class ResetNode(Node):
     def __init__(self, t_node):
@@ -93,7 +108,7 @@ class ResetNode(Node):
         self.t_node.reset()
         self.finish()
 
-class Playing(LoopingStateMachine):
+class Playing(StateMachine):
     def setup(self):
         blocker = Blocker()
         blocks = {"left": BlockLeftStand(),
@@ -104,4 +119,6 @@ class Playing(LoopingStateMachine):
         center = HeadPos(0, 0)
         for name in blocks:
             b = blocks[name]
-            self.add_transition(stand, C, blocker, S(name), b, T(1), ResetNode(b), T(1), blocker, C, stand)
+            # self.add_transition(stand, C, blocker, S(name), b, T(1), ResetNode(b), T(1), blocker, C, stand)
+            self.add_transition(stand, C, blocker, S(name), b, T(6), blocker, C, stand)
+

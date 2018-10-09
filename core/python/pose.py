@@ -207,6 +207,11 @@ class BlockLeft(Task):
       cfgpose.standingPose, 2.0
     ))
 
+class ToPoseArms(MultiTask):
+  def __init__(self, pose, time = 0.5):
+    self.bpose = ToPose(pose = pose, time = time)
+    super(ToPoseArms, self).__init__(self.bpose)
+
 class BlockLeftStand(Task):
   def __init__(self, time = 1.0):
     super(BlockLeftStand, self).__init__(time=time)
@@ -214,14 +219,15 @@ class BlockLeftStand(Task):
     self.state = state_machine.SimpleStateMachine('init', 'put_down', 'finish')
 
   def run(self):
+    commands.setStiffness(cfgstiff.One, 0.3)
     st = self.state
 
     if st.inState(st.init):
       st.transition(st.put_down)
-      return ToPose(cfgpose.raiseLeftArmSide, 0.5)
+      return ToPoseArms(cfgpose.raiseLeftArmSide, 0.5)
     elif st.inState(st.put_down):
       st.transition(st.finish)
-      return ToPose(cfgpose.bothArmsDown, 0.5)
+      return ToPoseArms(cfgpose.bothArmsDown, 0.5)
     elif st.inState(st.finish):
       st.transition(st.init)
       self.finish()
@@ -235,14 +241,15 @@ class BlockRightStand(Task):
     self.state = state_machine.SimpleStateMachine('init', 'put_down', 'finish')
 
   def run(self):
+    commands.setStiffness(cfgstiff.One, 0.3)
     st = self.state
 
     if st.inState(st.init):
       st.transition(st.put_down)
-      return ToPose(cfgpose.raiseRightArmSide, 0.5)
+      return ToPoseArms(cfgpose.raiseRightArmSide, 0.5)
     elif st.inState(st.put_down):
       st.transition(st.finish)
-      return ToPose(cfgpose.bothArmsDown, 0.5)
+      return ToPoseArms(cfgpose.bothArmsDown, 0.5)
     elif st.inState(st.finish):
       st.transition(st.init)
       self.finish()
@@ -255,14 +262,15 @@ class BlockCenterStand(Task):
     self.state = state_machine.SimpleStateMachine('init', 'put_down', 'finish')
 
   def run(self):
+    commands.setStiffness(cfgstiff.One, 0.3)
     st = self.state
 
     if st.inState(st.init):
       st.transition(st.put_down)
-      return ToPose(cfgpose.raiseArmsForward, 0.5)
+      return ToPoseArms(cfgpose.raiseArmsForward, 0.5)
     elif st.inState(st.put_down):
       st.transition(st.finish)
-      return ToPose(cfgpose.bothArmsDown, 0.5)
+      return ToPoseArms(cfgpose.bothArmsDown, 0.5)
     elif st.inState(st.finish):
       st.transition(st.init)
       self.finish()
