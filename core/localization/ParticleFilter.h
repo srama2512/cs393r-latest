@@ -1,9 +1,11 @@
 #pragma once
 
 #include <math/Pose2D.h>
+#include <memory/WorldObjectBlock.h>
 #include <memory/MemoryCache.h>
 #include <memory/LocalizationBlock.h>
 #include <localization/Logging.h>
+#include <common/Field.h>
 
 class ParticleFilter {
   public:
@@ -14,6 +16,7 @@ class ParticleFilter {
     inline const std::vector<Particle>& particles() const {
       return cache_.localization_mem->particles;
     }
+    void reset();
 
   protected:
     inline std::vector<Particle>& particles() {
@@ -26,4 +29,15 @@ class ParticleFilter {
 
     mutable Pose2D mean_;
     mutable bool dirty_;
+    int n_particles;
+    double sigma_x, sigma_y, sigma_t;
+
+    void updateProbParticle(Particle& particle);
+    double getGaussianProb(double mu, double sigma, double x);
+    double getProbObservation(Particle p, int objEnum, double visionDistance, double visionBearing);
+    // void normalizeWeights();
+    // Particle sampleParticle(std::vector<double> cumulative_prob);
+    // void resampleParticles() {
 };
+
+
