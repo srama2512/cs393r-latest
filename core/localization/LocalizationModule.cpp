@@ -104,10 +104,10 @@ void LocalizationModule::processFrame() {
     double ballxs = smoothed_ball_distance * cos(smoothed_ball_bearing);
     double ballys = smoothed_ball_distance * sin(smoothed_ball_bearing);
 
-    printf("================================================================================================\n");
-    printf("Orig/Smooth: visionDistance: %.3f, visionBearing %.3f / visionDistance: %.3f, visionBearing %.3f\n", ball.visionDistance, ball.visionBearing, smoothed_ball_distance, smoothed_ball_bearing);
-    printf("Orig/Smooth: x: %.3f y: %.3f, x: %.3f y: %.3f\n", ballx, bally, ballxs, ballys);
-    printf("================================================================================================\n");
+    // printf("================================================================================================\n");
+    // printf("Orig/Smooth: visionDistance: %.3f, visionBearing %.3f / visionDistance: %.3f, visionBearing %.3f\n", ball.visionDistance, ball.visionBearing, smoothed_ball_distance, smoothed_ball_bearing);
+    // printf("Orig/Smooth: x: %.3f y: %.3f, x: %.3f y: %.3f\n", ballx, bally, ballxs, ballys);
+    // printf("================================================================================================\n");
 
     // Compute the relative position of the ball from vision readings
     auto relBall = Point2D::getPointFromPolar(ball.visionDistance, ball.visionBearing);

@@ -29,15 +29,17 @@ class ParticleFilter {
 
     mutable Pose2D mean_;
     mutable bool dirty_;
-    int n_particles;
+    int n_particles, n_rand_particles;
     double sigma_x, sigma_y, sigma_t;
 
-    void updateProbParticle(Particle& particle);
-    double getGaussianProb(double mu, double sigma, double x);
-    double getProbObservation(Particle p, int objEnum, double visionDistance, double visionBearing);
-    // void normalizeWeights();
-    // Particle sampleParticle(std::vector<double> cumulative_prob);
-    // void resampleParticles() {
+    void updateLogProbParticle(Particle& particle);
+    double getGaussianLogProb(double mu, double sigma, double x);
+    double getLogProbObservation(Particle p, int objEnum, double visionDistance, double visionBearing);
+    void normalizeWeights();
+    Particle sampleParticle(double t, std::vector<double> cumulative_prob);
+    void resampleParticles();
+    void printParticles();
+    void addRandomParticles();
 };
 
 
