@@ -173,7 +173,7 @@ const Pose2D& ParticleFilter::pose() const {
     }
     dirty_ = false;
 
-    cout << "Pose: X: " << mean_.translation.x << " Y: " << mean_.translation.y << " theta: " << mean_.rotation << endl;
+    // cout << "Pose: X: " << mean_.translation.x << " Y: " << mean_.translation.y << " theta: " << mean_.rotation << endl;
   }
   return mean_;
 }

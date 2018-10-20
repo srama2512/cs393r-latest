@@ -15,7 +15,7 @@ import memory
 import commands
 import cfgstiff
 from memory import walk_request, joint_commands
-from state_machine import Node, C, T, StateMachine
+from state_machine import Node, C, T, F, StateMachine
 class Playing(StateMachine):
     """Main behavior task."""
 
@@ -260,6 +260,6 @@ class Playing(StateMachine):
         # self.trans(stand, C, lookatball, C, sit, C, off)
         self.trans(stand, C, walk, T(5.0), walkturn, T(5.0), walkcurve, T(10.0), sit, C, off)
         # self.trans(stand, C, down, T(2.0), maintaindist, C, sit, C, off)
-
+        # self.trans(stand, C, center, F, stand, off)
         # self.trans(stand, C, center, T(5.0), walkturn, T(15.0), sit, C, off)
         # self.trans(stand, C, sit, C, readjoints, C, off, C, headturn)

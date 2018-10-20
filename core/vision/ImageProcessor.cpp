@@ -343,7 +343,7 @@ void ImageProcessor::detectGoal() {
 
     // cout << "Goal pan: " << goal->visionBearing << "   Goal tilt: " << goal->visionElevation << endl;
     // cout << "Goal distance: " << goal->visionDistance << endl << endl;
-    goal->seen = true;
+    goal->seen = false;//true;
 }
 
 
