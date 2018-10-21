@@ -38,6 +38,13 @@ vector<Blob> filterByDensity(vector<Blob> blobs) {
     return ret;
 }
 
+double density(Blob &b) {
+    double area = calculateBlobArea(b);
+    double density = b.lpCount / area;
+
+    return density;
+}
+
 vector<pair<Blob, Blob> > makeBeaconPairs(vector<Blob> &tblobs, vector<Blob> &bblobs) {
     vector<pair<Blob, Blob> > beacons;
     for(int i = 0; i < tblobs.size(); ++i) {
@@ -84,6 +91,9 @@ bool BeaconDetector::validateInverted(pair<Blob, Blob> &bblob) {
     int endX = min(width - 1, startX + dx);
     int endY = min(height - 1, startY + dy);
 
+    if(endY - startY < dy * 0.4)
+        return true;
+
     int tot_count = 1;
     int white_count = 0;
     for(int i = startX; i <= endX; i += xstep) {
@@ -110,11 +120,13 @@ bool BeaconDetector::validateUp(pair<Blob, Blob> &bblob) {
     startX -= (startX % xstep);
     int dx = (bblob.first.dx + bblob.second.dx) / 2;
     int dy = (bblob.first.dy + bblob.second.dy) / 2;
-    int startY = max(0, bblob.first.yi - dy);
-    startY -= (startY % ystep);
+    int startY = bblob.first.yi - dy;
     int endX = min(width - 1, startX + dx);
     int endY = min(height - 1, startY + dy);
 
+    startY = max(0, startY);
+    startY -= (startY % ystep);
+    
     if(bblob.first.yi - startY < dy * 0.4)
         return true;
 
@@ -138,7 +150,7 @@ bool BeaconDetector::validateUp(pair<Blob, Blob> &bblob) {
     for(auto color: colorCount) {
         double ratio = (double) color.second / tot_count;
         // cout << COLOR_NAME(color.first) << " " << ratio << endl;
-        if(ratio >= COLOR_ABOVE_BEACON_HIGH_BOUND)
+        if(ratio >= COLOR_ABOVE_BEACON_HIGH_BOUND && color.first != bblob.first.color)
             return false;
     }
 
@@ -156,7 +168,13 @@ pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const
 
     auto beacons = makeBeaconPairs(tblobs, bblobs);
 
+    // cout << "Beacon Pairs: " << beacons.size() << endl;
+
     for(int i = 0; i < beacons.size(); ++i) {
+        // cout << "density: " << density(beacons[i].first) << " " << density(beacons[i].second) << endl;
+        // cout << "AR: " << calculateBlobAspectRatio(beacons[i].first) << ", " << calculateBlobAspectRatio(beacons[i].second) << endl;
+        // cout << "VI: " << validateInverted(beacons[i]) << endl;
+        // cout << "VU: " << validateUp(beacons[i]) << endl;
         if(!validateInverted(beacons[i]) || !validateUp(beacons[i]))
             continue;
         return beacons[i];
@@ -166,13 +184,6 @@ pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const
     Blob b;
     b.invalid = true;
     return make_pair(b, b);
-}
-
-double density(Blob &b) {
-    double area = calculateBlobArea(b);
-    double density = b.lpCount / area;
-
-    return density;
 }
 
 void BeaconDetector::findBeacons(vector<Blob> &blobs) {
@@ -195,10 +206,10 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
     };
 
     map<Color, vector<Blob> > colorBlobs = {
-        { c_BLUE,       filterBlobs(blobs, c_BLUE, 50)     },
-        { c_YELLOW,     filterBlobs(blobs, c_YELLOW, 50)   },
-        { c_PINK,       filterBlobs(blobs, c_PINK, 50)     },
-        { c_WHITE,      filterBlobs(blobs, c_WHITE, 50)    }
+        { c_BLUE,       filterBlobs(blobs, c_BLUE, 30)     },
+        { c_YELLOW,     filterBlobs(blobs, c_YELLOW, 30)   },
+        { c_PINK,       filterBlobs(blobs, c_PINK, 30)     },
+        { c_WHITE,      filterBlobs(blobs, c_WHITE, 30)    }
     };
 
     for(auto beacon : beacons) {
@@ -237,7 +248,7 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
         
         // cout << "Total AR: " << aspect_ratio << endl;
         // cout << "AR: " << calculateBlobAspectRatio(bblob.first) << ", " << calculateBlobAspectRatio(bblob.second) << endl;
-        // cout << "density: " << density(bblob.first) << ", " << density(bblob.second) << endl;"
+        // cout << "density: " << density(bblob.first) << ", " << density(bblob.second) << endl;
         // cout << "saw " << getName(beacon.first) << " at (" << object.imageCenterX << "," << object.imageCenterY << ") with calculated distance " << object.visionDistance << endl;
     }
     // cout << endl << endl;

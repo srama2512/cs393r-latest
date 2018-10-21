@@ -82,19 +82,19 @@ class WalkCurve(Node):
         commands.setWalkVelocity(0.5, 0.0, 0.2)
 
 class WalkToCenter(Node):
-    def __init__(self, delta_theta=0.1, thresh_theta=0.3):
+    def __init__(self, delta_theta=0.2, thresh_theta=0.3):
         super(WalkToCenter, self).__init__()
         self.delta_theta = delta_theta
         self.thresh_theta = thresh_theta
         self.locErrSmooth = EWMA(0.0, 0.9)
         self.xVelSmooth = EWMA(0.0, 0.95)
-        self.radiusSmooth = EWMA(0.0, 0.9)
-        self.xVelLimit = 1.00
+        self.radiusSmooth = EWMA(10000.0, 0.9)
+        self.xVelLimit = 0.70
         self.headRotDir = 1.0
-        self.headRotDur = 3
-        self.headPanLimit = 45.0 * core.DEG_T_RAD
+        self.headRotDur = 4.5
+        self.headPanLimit = 60.0 * core.DEG_T_RAD
         self.lastShift = self.getTime()
-        self.radiusThresh = 100.0
+        self.radiusThresh = 250.0
 
     def run(self):
         robot_state = mem_objects.memory.world_objects.getObjPtr(mem_objects.memory.robot_state.WO_SELF)
@@ -131,9 +131,14 @@ class WalkToCenter(Node):
         commands.setHeadPanTilt(pan=self.headPanLimit * self.headRotDir, tilt=-10.0, time=self.headRotDur)
         commands.setWalkVelocity(self.xVelSmooth.get(), 0.0, rotDir * self.delta_theta)
 
+# class ExecutePlannedPath(Node):
+#     def __init__(self):
+
+
 class Playing(StateMachine):
     def setup(self):
         center = HeadPos(0, 0)
         sit = pose.Sit()
         self.trans(Stand(), C, WalkToCenter(), C, Stand(), C, sit, C, Off())
+        # self.trans(Stand(), C, Walk(), T(50.0), sit, C, Off())
 

@@ -34,7 +34,7 @@ double ParticleFilter::getLogProbObservation(Particle p, int objEnum, double vis
   double y_pred = p.y + visionDistance * sin(angle);
   int objIdx = objEnum - WO_BEACON_BLUE_YELLOW + 1;
   Point2D loc = landmarkLocation[objIdx];
-  double sigma = 50.0;
+  double sigma = 500.0;
   double logprob = getGaussianLogProb(loc.x, sigma, x_pred) + getGaussianLogProb(loc.y, sigma, y_pred);
   return logprob;
 }
@@ -129,10 +129,6 @@ void ParticleFilter::processFrame() {
   const auto& disp = cache_.odometry->displacement;
   log(41, "Updating particles from odometry: %2.f,%2.f @ %2.2f", disp.translation.x, disp.translation.y, disp.rotation * RAD_T_DEG);
 
-  for(auto& p : particles()) {
-    p.w = loge(p.w);
-  }
-
   addRandomParticles();
 
   // Dynamics update
@@ -155,10 +151,6 @@ void ParticleFilter::processFrame() {
 
   normalizeWeights();
 
-  for(auto& p : particles()) {
-    p.w = exp(p.w);
-  }
-
 }
 
 const Pose2D& ParticleFilter::pose() const {
@@ -166,14 +158,37 @@ const Pose2D& ParticleFilter::pose() const {
     // Compute the mean pose estimate
     mean_ = Pose2D();
 
+    double sin_ = 0.0;
+    double cos_ = 0.0;
+
     for(const auto& p : particles()) {
-      mean_.translation.x += (p.w) * p.x;
-      mean_.translation.y += (p.w) * p.y;
-      mean_.rotation += (p.w) * p.t;
+      mean_.translation.x += exp(p.w) * p.x;
+      mean_.translation.y += exp(p.w) * p.y;
+      sin_ += exp(p.w) * sin(p.t);
+      cos_ += exp(p.w) * cos(p.t);
     }
+
+    // mean_.translation.x /= (double) n_particles;
+    // mean_.translation.y /= (double) n_particles;
+    double angle_estimate = atan2(sin_, cos_);
+    mean_.rotation = angle_estimate > 0 ? angle_estimate : 2.0 * M_PI + angle_estimate;
+
+    // Pose2D var_;
+
+    // for(const auto& p : particles()) {
+    //   var_.translation.x += (p.x - mean_.translation.x) * (p.x - mean_.translation.x);
+    //   var_.translation.y += (p.y - mean_.translation.y) * (p.y - mean_.translation.y);
+    //   var_.rotation += (p.t - mean_.rotation) * (p.t - mean_.rotation);
+    // }
+
+    // var_.translation.x /= (double) n_particles;
+    // var_.translation.y /= (double) n_particles;
+    // var_.rotation /= (double) n_particles;
+
     dirty_ = false;
 
-    // cout << "Pose: X: " << mean_.translation.x << " Y: " << mean_.translation.y << " theta: " << mean_.rotation << endl;
+    // cout << "Pose mean: X: " << mean_.translation.x << " Y: " << mean_.translation.y << " theta: " << mean_.rotation << endl;
+    // cout << "Pose STD : X: " << sqrt(var_.translation.x) << " Y: " << sqrt(var_.translation.y) << " theta: " << sqrt(var_.rotation) << endl;
   }
   return mean_;
 }
@@ -190,8 +205,5 @@ void ParticleFilter::reset() {
   }
   normalizeWeights();
 
-  for(auto& p : particles()) {
-    p.w = exp(p.w);
-  }
 }
 
