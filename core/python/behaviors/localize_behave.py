@@ -94,7 +94,7 @@ class WalkToCenter(Node):
         self.headRotDur = 4.5
         self.headPanLimit = 60.0 * core.DEG_T_RAD
         self.lastShift = self.getTime()
-        self.radiusThresh = 250.0
+        self.radiusThresh = 100.0
 
     def run(self):
         robot_state = mem_objects.memory.world_objects.getObjPtr(mem_objects.memory.robot_state.WO_SELF)
