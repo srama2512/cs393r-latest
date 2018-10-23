@@ -41,6 +41,7 @@ class ParticleFilter {
     void printParticles();
     void addRandomParticles();
     bool landmarksSeen();
+    double computeEntropy();
 };
 
 

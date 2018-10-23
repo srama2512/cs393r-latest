@@ -21,6 +21,7 @@ void ParticleFilter::init(Point2D loc, float orientation) {
   sigma_x = 10.0;
   sigma_y = 10.0;
   sigma_t = 0.1;
+  entropy_thresh = log(n_particles) / 2.0;
 
   reset();
 }
@@ -68,6 +69,14 @@ void ParticleFilter::printParticles() {
     cout << "Particle: x: " << p.x << " y: " << p.y << " t: " << p.t << " w: " << p.w << endl;
   }
   cout << endl << endl;
+}
+
+double ParticleFilter::computeEntropy() {
+  double entropy = 0.0;
+  for (auto& p : particles()) {
+    entropy -= (exp(p.w) * p.w);
+  }
+  return entropy;
 }
 
 void ParticleFilter::normalizeWeights() {
@@ -169,7 +178,7 @@ void ParticleFilter::processFrame() {
 
   // resample normalizes the probablities to uniform
   // resample only when you see beacons
-  if(landmarksSeenFlag) {
+  if(landmarksSeenFlag && computeEntropy() < entropy_thresh) {
     resampleParticles();
     normalizeWeights();
   }
