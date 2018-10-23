@@ -3,6 +3,7 @@
 #include <memory/OdometryBlock.h>
 #include <common/Random.h>
 #include <cmath>
+#include <cstdio>
 
 inline double loge(double val) {
   return log2(val) / log2(M_E);
@@ -15,10 +16,10 @@ ParticleFilter::ParticleFilter(MemoryCache& cache, TextLogger*& tlogger)
 void ParticleFilter::init(Point2D loc, float orientation) {
   mean_.translation = loc;
   mean_.rotation = orientation;
-  n_particles = 100;
+  n_particles = 300;
   n_rand_particles = 1;
-  sigma_x = 50.0;
-  sigma_y = 50.0;
+  sigma_x = 10.0;
+  sigma_y = 10.0;
   sigma_t = 0.1;
 
   reset();
@@ -50,6 +51,16 @@ void ParticleFilter::updateLogProbParticle(Particle& particle) {
     }
   }
   particle.w += logprob;
+}
+
+bool ParticleFilter::landmarksSeen() {
+  for (int idx = WO_BEACON_BLUE_YELLOW; idx <= WO_BEACON_BLUE_YELLOW + 5; idx++) {
+    auto& beacon = cache_.world_object->objects_[idx];
+    if (beacon.seen) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void ParticleFilter::printParticles() {
@@ -128,13 +139,22 @@ void ParticleFilter::processFrame() {
   // Retrieve odometry update - how do we integrate this into the filter?
   const auto& disp = cache_.odometry->displacement;
   log(41, "Updating particles from odometry: %2.f,%2.f @ %2.2f", disp.translation.x, disp.translation.y, disp.rotation * RAD_T_DEG);
+  // printf("Updating particles from odometry: %2.2f,%2.2f @ %2.2f\n", disp.translation.x, disp.translation.y, disp.rotation * RAD_T_DEG);
 
-  addRandomParticles();
+  bool landmarksSeenFlag = landmarksSeen();
+
+  // add random particles only when you see beacons
+  if(landmarksSeenFlag)
+    addRandomParticles();
 
   // Dynamics update
   for(auto& p : particles()) {
-    p.x = Random::inst().sampleN() * sigma_x + p.x + disp.translation.x;
-    p.y = Random::inst().sampleN() * sigma_y + p.y + disp.translation.y;
+    double r = sqrt(pow(disp.translation.x, 2) + pow(disp.translation.y, 2));
+    double xtrans = r * cos(p.t);
+    double ytrans = r * sin(p.t);
+
+    p.x = Random::inst().sampleN() * sigma_x + p.x + xtrans;
+    p.y = Random::inst().sampleN() * sigma_y + p.y + ytrans;
     p.t = Random::inst().sampleN() * sigma_t + p.t + disp.rotation;
     p.t = fmod(p.t, 2.0 * M_PI);
     if (p.t < 0.0)
@@ -148,8 +168,11 @@ void ParticleFilter::processFrame() {
   normalizeWeights();
 
   // resample normalizes the probablities to uniform
-  resampleParticles();
-
+  // resample only when you see beacons
+  if(landmarksSeenFlag) {
+    resampleParticles();
+    normalizeWeights();
+  }
 }
 
 const Pose2D& ParticleFilter::pose() const {

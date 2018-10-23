@@ -170,8 +170,8 @@ pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const
         // cout << "AR: " << calculateBlobAspectRatio(beacons[i].first) << ", " << calculateBlobAspectRatio(beacons[i].second) << endl;
         // cout << "VI: " << validateInverted(beacons[i]) << endl;
         // cout << "VU: " << validateUp(beacons[i]) << endl;
-        // if(!validateInverted(beacons[i]) || !validateUp(beacons[i]))
-        //     continue;
+        if(!validateInverted(beacons[i]) || !validateUp(beacons[i]))
+            continue;
         return beacons[i];
     }
 

@@ -88,13 +88,13 @@ class WalkToCenter(Node):
         self.thresh_theta = thresh_theta
         self.locErrSmooth = EWMA(0.0, 0.9)
         self.xVelSmooth = EWMA(0.0, 0.95)
-        self.radiusSmooth = EWMA(10000.0, 0.9)
+        self.radiusSmooth = EWMA(10000.0, 0.95)
         self.xVelLimit = 0.70
         self.headRotDir = 1.0
         self.headRotDur = 4.5
         self.headPanLimit = 60.0 * core.DEG_T_RAD
         self.lastShift = self.getTime()
-        self.radiusThresh = 250.0
+        self.radiusThresh = 100.0
 
     def run(self):
         robot_state = mem_objects.memory.world_objects.getObjPtr(mem_objects.memory.robot_state.WO_SELF)
@@ -126,7 +126,8 @@ class WalkToCenter(Node):
         if self.radiusSmooth.get() < self.radiusThresh:
             commands.setWalkVelocity(0.0, 0.0, 0.0)
             commands.setHeadPanTilt(pan=0.0, tilt=0.0, time=1.0)
-            self.finish()
+            print ('\n\n\n\n\n =============== REACHED =============== \n\n\n\n\n')
+            # self.finish()
                 
         commands.setHeadPanTilt(pan=self.headPanLimit * self.headRotDir, tilt=-10.0, time=self.headRotDur)
         commands.setWalkVelocity(self.xVelSmooth.get(), 0.0, rotDir * self.delta_theta)

@@ -40,6 +40,7 @@ class ParticleFilter {
     void resampleParticles();
     void printParticles();
     void addRandomParticles();
+    bool landmarksSeen();
 };
 
 
