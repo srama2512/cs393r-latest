@@ -12,23 +12,23 @@ struct Blob {
   // added for assignment 1
   Color color;
   uint16_t lpCount;
-  std::vector<uint32_t> lpIndex;
-  float diffStart;
-  float diffEnd;
-  float doubleDiff;
-  uint16_t widthStart;
-  uint16_t widthEnd;
+  // std::vector<uint32_t> lpIndex;
+  // float diffStart;
+  // float diffEnd;
+  // float doubleDiff;
+  // uint16_t widthStart;
+  // uint16_t widthEnd;
   uint16_t avgX;
   uint16_t avgY;
-  float avgWidth;
-  float correctPixelRatio;
+  // float avgWidth;
+  // float correctPixelRatio;
   bool invalid;
 
   // GOAL DETECTION
-  int edgeSize;
-  int edgeStrength;
+  // int edgeSize;
+  // int edgeStrength;
 
-  Blob() : lpIndex(MAX_BLOB_VISIONPOINTS, 0) { }
+  Blob(){ }
 };
 
 inline ostream& operator<<(ostream &Str, Blob const& v) {

@@ -45,7 +45,7 @@ double density(Blob &b) {
     return density;
 }
 
-vector<pair<Blob, Blob> > makeBeaconPairs(vector<Blob> &tblobs, vector<Blob> &bblobs) {
+vector<pair<Blob, Blob> > makeBeaconPairs(const vector<Blob> &tblobs, const vector<Blob> &bblobs) {
     vector<pair<Blob, Blob> > beacons;
     for(int i = 0; i < tblobs.size(); ++i) {
         for(int j = 0; j < bblobs.size(); ++j) {
@@ -67,9 +67,12 @@ vector<pair<Blob, Blob> > makeBeaconPairs(vector<Blob> &tblobs, vector<Blob> &bb
             // cout << "AS: " << areaSim << endl;
         #endif
 
-            tblobs[i].invalid = false;
-            bblobs[j].invalid = false;
-            beacons.push_back(make_pair(tblobs[i], bblobs[j]));
+            Blob tb = tblobs[i];
+            Blob bb = bblobs[j];
+            
+            tb.invalid = false;
+            bb.invalid = false;
+            beacons.push_back(make_pair(tb, bb));
         }
     }
     return beacons;
@@ -157,16 +160,8 @@ bool BeaconDetector::validateUp(pair<Blob, Blob> &bblob) {
     return true;
 }
 
-pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const vector<Blob> &bb) {
-
-    // check if the aspect ratio is within ASPECT_RATIO_LOW_BOUND & ASPECT_RATIO_HIGH_BOUND
-    auto tblobs = filterByAspectRatio(tb);
-    auto bblobs = filterByAspectRatio(bb);
-    // check if the density is greater than DENSITY_LOW_BOUND
-    tblobs = filterByDensity(tblobs);
-    bblobs = filterByDensity(bblobs);
-
-    auto beacons = makeBeaconPairs(tblobs, bblobs);
+pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const vector<Blob> &bb) {    
+    auto beacons = makeBeaconPairs(tb, bb);
 
     // cout << "Beacon Pairs: " << beacons.size() << endl;
 
@@ -175,8 +170,8 @@ pair<Blob, Blob> BeaconDetector::findBeaconsOfType(const vector<Blob> &tb, const
         // cout << "AR: " << calculateBlobAspectRatio(beacons[i].first) << ", " << calculateBlobAspectRatio(beacons[i].second) << endl;
         // cout << "VI: " << validateInverted(beacons[i]) << endl;
         // cout << "VU: " << validateUp(beacons[i]) << endl;
-        if(!validateInverted(beacons[i]) || !validateUp(beacons[i]))
-            continue;
+        // if(!validateInverted(beacons[i]) || !validateUp(beacons[i]))
+        //     continue;
         return beacons[i];
     }
 
@@ -211,6 +206,12 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
         { c_PINK,       filterBlobs(blobs, c_PINK, 30)     },
         { c_WHITE,      filterBlobs(blobs, c_WHITE, 30)    }
     };
+
+    // check if the aspect ratio is within ASPECT_RATIO_LOW_BOUND & ASPECT_RATIO_HIGH_BOUND
+    // check if the density is greater than DENSITY_LOW_BOUND
+    for(auto it = colorBlobs.begin(); it != colorBlobs.end(); ++it) {
+        it->second = filterByDensity(filterByAspectRatio(it->second));
+    }
 
     for(auto beacon : beacons) {
         auto& object = vblocks_.world_object->objects_[beacon.first];

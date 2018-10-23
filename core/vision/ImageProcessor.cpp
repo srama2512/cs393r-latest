@@ -4,26 +4,30 @@
 #include <vision/Logging.h>
 #include <iostream>
 #include <cmath>
+#include <chrono>
 
-vector<RLE*> ImageProcessor::getRLERow(int y, int width, int &start_idx) {
+vector<RLE> ImageProcessor::getRLERow(int y, int width, int &start_idx) {
     // handle NULL case
     int xstep = 1 << iparams_.defaultHorizontalStepScale;
     int ystep = 1 << iparams_.defaultVerticalStepScale;
-    auto prev_color = getSegImg()[y * width];
+    unsigned char* seg_img = getSegImg();
+    auto prev_color = seg_img[y * width];
     auto prev_idx = 0;
-    vector<RLE*> encoding;
+    vector<RLE> encoding;
     for(int x = 0; x < width; x += xstep) {
-        auto c = getSegImg()[y * width + x];
+        auto c = seg_img[y * width + x];
         if(c == prev_color)
             continue;
         else {
-            encoding.push_back(new RLE(y, prev_idx, x - 1, start_idx, prev_color, ystep));
+            RLE tmp(y, prev_idx, x - 1, start_idx, prev_color, ystep);
+            encoding.push_back(tmp);
             start_idx++;
             prev_color = c;
             prev_idx = x;
         }
     }
-    encoding.push_back(new RLE(y, prev_idx, width - 1, start_idx, prev_color, ystep));
+    RLE tmp(y, prev_idx, width - 1, start_idx, prev_color, ystep);
+    encoding.push_back(tmp);
     start_idx++;
 
     return encoding;
@@ -32,11 +36,11 @@ vector<RLE*> ImageProcessor::getRLERow(int y, int width, int &start_idx) {
 int ImageProcessor::getParent(int idx) {
     if(rle_ptr.find(idx) == rle_ptr.end())
         return -1;
-    if(rle_ptr[idx]->parent == rle_ptr[idx]->curr)
-        return rle_ptr[idx]->parent;
+    if(rle_ptr[idx].parent == rle_ptr[idx].curr)
+        return rle_ptr[idx].parent;
     // Path compression
-    int p = getParent(rle_ptr[idx]->parent);
-    rle_ptr[idx]->parent = p;
+    int p = getParent(rle_ptr[idx].parent);
+    rle_ptr[idx].parent = p;
     return p;
 }
 
@@ -50,59 +54,62 @@ void ImageProcessor::mergeBlobs(int idx1, int idx2) {
     if(p1 == p2)
         return;
     // Union by rank
-    int r1 = rle_ptr[p1]->rank;
-    int r2 = rle_ptr[p2]->rank;
+    int r1 = rle_ptr[p1].rank;
+    int r2 = rle_ptr[p2].rank;
     if(r1 > r2) {
-        rle_ptr[p2]->parent = p1;
-        rle_ptr[p1]->npixels += rle_ptr[p2]->npixels;
-        rle_ptr[p1]->xi = min(rle_ptr[p1]->xi, rle_ptr[p2]->xi);
-        rle_ptr[p1]->xf = max(rle_ptr[p1]->xf, rle_ptr[p2]->xf);
-        rle_ptr[p1]->yi = min(rle_ptr[p1]->yi, rle_ptr[p2]->yi);
-        rle_ptr[p1]->yf = max(rle_ptr[p1]->yf, rle_ptr[p2]->yf);
-        rle_ptr[p1]->xsum += rle_ptr[p2]->xsum;
-        rle_ptr[p1]->ysum += rle_ptr[p2]->ysum;
+        rle_ptr[p2].parent = p1;
+        rle_ptr[p1].npixels += rle_ptr[p2].npixels;
+        rle_ptr[p1].xi = min(rle_ptr[p1].xi, rle_ptr[p2].xi);
+        rle_ptr[p1].xf = max(rle_ptr[p1].xf, rle_ptr[p2].xf);
+        rle_ptr[p1].yi = min(rle_ptr[p1].yi, rle_ptr[p2].yi);
+        rle_ptr[p1].yf = max(rle_ptr[p1].yf, rle_ptr[p2].yf);
+        rle_ptr[p1].xsum += rle_ptr[p2].xsum;
+        rle_ptr[p1].ysum += rle_ptr[p2].ysum;
+        parentRLE.erase(p2);
     }
     else if(r2 > r1) {
-        rle_ptr[p1]->parent = p2;
-        rle_ptr[p2]->npixels += rle_ptr[p1]->npixels;
-        rle_ptr[p2]->xi = min(rle_ptr[p1]->xi, rle_ptr[p2]->xi);
-        rle_ptr[p2]->xf = max(rle_ptr[p1]->xf, rle_ptr[p2]->xf);
-        rle_ptr[p2]->yi = min(rle_ptr[p1]->yi, rle_ptr[p2]->yi);
-        rle_ptr[p2]->yf = max(rle_ptr[p1]->yf, rle_ptr[p2]->yf);
-        rle_ptr[p2]->xsum += rle_ptr[p1]->xsum;
-        rle_ptr[p2]->ysum += rle_ptr[p1]->ysum;
+        rle_ptr[p1].parent = p2;
+        rle_ptr[p2].npixels += rle_ptr[p1].npixels;
+        rle_ptr[p2].xi = min(rle_ptr[p1].xi, rle_ptr[p2].xi);
+        rle_ptr[p2].xf = max(rle_ptr[p1].xf, rle_ptr[p2].xf);
+        rle_ptr[p2].yi = min(rle_ptr[p1].yi, rle_ptr[p2].yi);
+        rle_ptr[p2].yf = max(rle_ptr[p1].yf, rle_ptr[p2].yf);
+        rle_ptr[p2].xsum += rle_ptr[p1].xsum;
+        rle_ptr[p2].ysum += rle_ptr[p1].ysum;
+        parentRLE.erase(p1);
     }
     else {
-        rle_ptr[p2]->parent = p1;
-        rle_ptr[p1]->rank++;
-        rle_ptr[p1]->npixels += rle_ptr[p2]->npixels;
-        rle_ptr[p1]->xi = min(rle_ptr[p1]->xi, rle_ptr[p2]->xi);
-        rle_ptr[p1]->xf = max(rle_ptr[p1]->xf, rle_ptr[p2]->xf);
-        rle_ptr[p1]->yi = min(rle_ptr[p1]->yi, rle_ptr[p2]->yi);
-        rle_ptr[p1]->yf = max(rle_ptr[p1]->yf, rle_ptr[p2]->yf);
-        rle_ptr[p1]->xsum += rle_ptr[p2]->xsum;
-        rle_ptr[p1]->ysum += rle_ptr[p2]->ysum;
+        rle_ptr[p2].parent = p1;
+        rle_ptr[p1].rank++;
+        rle_ptr[p1].npixels += rle_ptr[p2].npixels;
+        rle_ptr[p1].xi = min(rle_ptr[p1].xi, rle_ptr[p2].xi);
+        rle_ptr[p1].xf = max(rle_ptr[p1].xf, rle_ptr[p2].xf);
+        rle_ptr[p1].yi = min(rle_ptr[p1].yi, rle_ptr[p2].yi);
+        rle_ptr[p1].yf = max(rle_ptr[p1].yf, rle_ptr[p2].yf);
+        rle_ptr[p1].xsum += rle_ptr[p2].xsum;
+        rle_ptr[p1].ysum += rle_ptr[p2].ysum;
+        parentRLE.erase(p2);
     }
 }
 
-void ImageProcessor::mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding) {
+void ImageProcessor::mergeEncodings(vector<RLE> &prev_encoding, vector<RLE> &encoding) {
     if(prev_encoding.size() == 0 || encoding.size() == 0)
         return;
     int i = 0, j = 0;
     while(i < prev_encoding.size() && j < encoding.size()) {
-        if(prev_encoding[i]->rcol < encoding[j]->lcol) {
+        if(prev_encoding[i].rcol < encoding[j].lcol) {
             i++;
         }
-        else if(prev_encoding[i]->lcol > encoding[j]->rcol) {
+        else if(prev_encoding[i].lcol > encoding[j].rcol) {
             j++;
         }
         else {
             // overlap detected, if colors match then merge blobs
-            if(prev_encoding[i]->color == encoding[j]->color) {
-                mergeBlobs(prev_encoding[i]->curr, encoding[j]->curr);
+            if(prev_encoding[i].color == encoding[j].color) {
+                mergeBlobs(prev_encoding[i].curr, encoding[j].curr);
             }
             // progress pointers
-            if(prev_encoding[i]->rcol >= encoding[j]->rcol) {
+            if(prev_encoding[i].rcol >= encoding[j].rcol) {
                 j++;
             }
             else {
@@ -112,18 +119,18 @@ void ImageProcessor::mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &e
     }
 }
 
-Blob makeBlob(RLE* r) {
+Blob makeBlob(RLE &r) {
     Blob b;
-    b.xi = r->xi;
-    b.xf = r->xf;
-    b.yi = r->yi;
-    b.yf = r->yf;
-    b.dx = r->xf - r->xi + 1;
-    b.dy = r->yf - r->yi + 1;
-    b.color = static_cast<Color>(r->color);
-    b.lpCount = r->npixels;
-    b.avgX = r->xsum / r->npixels;
-    b.avgY = r->ysum / r->npixels;
+    b.xi = r.xi;
+    b.xf = r.xf;
+    b.yi = r.yi;
+    b.yf = r.yf;
+    b.dx = r.xf - r.xi + 1;
+    b.dy = r.yf - r.yi + 1;
+    b.color = static_cast<Color>(r.color);
+    b.lpCount = r.npixels;
+    b.avgX = r.xsum / r.npixels;
+    b.avgY = r.ysum / r.npixels;
     
     return b;
 }
@@ -135,26 +142,27 @@ void ImageProcessor::calculateBlobs() {
     int ystep = 1 << iparams_.defaultVerticalStepScale;
     int loc_idx = 0;
     rle_ptr.clear();
-    vector<RLE*> prev_encoding;
+    parentRLE.clear();
+    vector<RLE> prev_encoding;
 
     for(int y = 0; y < height; y += ystep) {
         auto encoding = getRLERow(y, width, loc_idx);
         // initialising the hash table with RLE pointers
         for(int i = 0; i < encoding.size(); ++i) {
-            assert(rle_ptr.find(encoding[i]->curr) == rle_ptr.end());
-            rle_ptr[encoding[i]->curr] = encoding[i];
+            assert(rle_ptr.find(encoding[i].curr) == rle_ptr.end());
+            rle_ptr[encoding[i].curr] = encoding[i];
+            parentRLE.insert(encoding[i].curr);
         }
         mergeEncodings(prev_encoding, encoding);
-        prev_encoding = encoding;
+        prev_encoding.swap(encoding);
     }
+
     // setting the detected blobs in the vector
     detected_blobs.clear();
-    for(auto it = rle_ptr.begin(); it != rle_ptr.end(); ++it) {
-        RLE* b = it->second;
-        if(b->parent == b->curr) {
-            detected_blobs.push_back(makeBlob(b));
-        }
-        delete(b);
+    detected_blobs.resize(parentRLE.size());
+    int i = 0;
+    for(auto it = parentRLE.begin(); it != parentRLE.end(); ++it, ++i) {
+        detected_blobs[i] = makeBlob(rle_ptr[*it]);
     }
 }
 
@@ -277,6 +285,7 @@ void ImageProcessor::processFrame(){
   vblocks_.robot_vision->horizon = horizon;
   tlog(30, "Classifying Image: %i", camera_);
   if(!color_segmenter_->classifyImage(color_table_)) return;
+  
   calculateBlobs();
   detectBall();
   if(camera_ == Camera::BOTTOM) return;

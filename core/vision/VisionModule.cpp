@@ -15,6 +15,7 @@
 #include <vision/Logging.h>
 #include <common/Util.h>
 #include <boost/lexical_cast.hpp>
+#include <chrono>
 
 void VisionModule::specifyMemoryDependency() {
   //last_frame_processed_ = 0;
@@ -67,11 +68,16 @@ void VisionModule::processFrame() {
   }
 #endif
 
+  auto start = std::chrono::system_clock::now();
   tlog(30, "Processing top camera");
   top_processor_->processFrame();
 
   tlog(30, "Processing bottom camera");
   bottom_processor_->processFrame();
+  auto end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> diff = end-start;
+  // cout << "Duration in ImageProcessor: " << diff.count() << endl;
 }
 
 void VisionModule::updateTransforms() {

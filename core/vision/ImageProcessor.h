@@ -13,6 +13,7 @@
 #include <math/Pose3D.h>
 #include <vision/structures/VisionParams.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <math/KalmanFilter.h>
 
@@ -34,6 +35,10 @@ struct RLE {
 	int yf;
 	int xsum;
 	int ysum;
+
+    RLE() {
+        
+    }
 
     RLE(int y, int l, int r, int idx, int c, int ystep) {
         lcol = l;
@@ -85,8 +90,8 @@ class ImageProcessor {
     bool isImageLoaded();
     int getParent(int idx); 
     void mergeBlobs(int idx1, int idx2); 
-	vector<RLE*> getRLERow(int y, int width, int &start_idx); 
-	void mergeEncodings(vector<RLE*> &prev_encoding, vector<RLE*> &encoding); 
+	vector<RLE> getRLERow(int y, int width, int &start_idx); 
+	void mergeEncodings(vector<RLE> &prev_encoding, vector<RLE> &encoding); 
 	void calculateBlobs();
     void detectBall();
     void findBall(int& imageX, int& imageY);
@@ -117,7 +122,8 @@ class ImageProcessor {
     int bottomFrameCounter_ = 0;
     
     // blob store
-    unordered_map<int, RLE*> rle_ptr;
+    unordered_map<int, RLE> rle_ptr;
+    unordered_set<int> parentRLE;
     vector<Blob> detected_blobs;
 
     // Ball detection

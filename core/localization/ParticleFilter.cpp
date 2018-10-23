@@ -46,7 +46,6 @@ void ParticleFilter::updateLogProbParticle(Particle& particle) {
     auto& beacon = cache_.world_object->objects_[idx];
     if (beacon.seen) {
       double obs_prob = getLogProbObservation(particle, idx, (double)beacon.visionDistance, (double)beacon.visionBearing);
-      // cout << "beacon seen: " << obs_prob << endl;
       logprob += obs_prob;
     }
   }
@@ -107,6 +106,7 @@ void ParticleFilter::resampleParticles() {
   auto& particles_ = particles();
   for (int i=0; i<n_particles; i++) {
     particles_[i] = particles_new[i];
+    particles_[i].w = -loge(n_particles);
   }
 }
 
@@ -147,9 +147,8 @@ void ParticleFilter::processFrame() {
 
   normalizeWeights();
 
+  // resample normalizes the probablities to uniform
   resampleParticles();
-
-  normalizeWeights();
 
 }
 
