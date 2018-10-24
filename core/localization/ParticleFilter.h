@@ -7,12 +7,14 @@
 #include <localization/Logging.h>
 #include <common/Field.h>
 
+#define KMEANS_ENABLED
+
 class ParticleFilter {
   public:
     ParticleFilter(MemoryCache& cache, TextLogger*& tlogger);
     void init(Point2D loc, float orientation);
     void processFrame();
-    const Pose2D& pose() const;
+    Pose2D& pose();
     inline const std::vector<Particle>& particles() const {
       return cache_.localization_mem->particles;
     }
@@ -31,6 +33,10 @@ class ParticleFilter {
     mutable bool dirty_;
     int n_particles, n_rand_particles;
     double sigma_x, sigma_y, sigma_t;
+    double entropy_thresh;
+
+    int kmeans_k_;
+    int kmeans_iterations_;
 
     void updateLogProbParticle(Particle& particle);
     double getGaussianLogProb(double mu, double sigma, double x);
@@ -42,6 +48,7 @@ class ParticleFilter {
     void addRandomParticles();
     bool landmarksSeen();
     double computeEntropy();
+    Particle getKmeansPose();
 };
 
 

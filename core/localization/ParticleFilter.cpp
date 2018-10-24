@@ -4,6 +4,7 @@
 #include <common/Random.h>
 #include <cmath>
 #include <cstdio>
+#include <climits>
 
 inline double loge(double val) {
   return log2(val) / log2(M_E);
@@ -21,7 +22,10 @@ void ParticleFilter::init(Point2D loc, float orientation) {
   sigma_x = 10.0;
   sigma_y = 10.0;
   sigma_t = 0.1;
-  entropy_thresh = log(n_particles) / 2.0;
+  entropy_thresh = loge(n_particles) / 1.5;
+
+  kmeans_k_ = 2;
+  kmeans_iterations_ = 5;
 
   reset();
 }
@@ -150,6 +154,12 @@ void ParticleFilter::processFrame() {
   log(41, "Updating particles from odometry: %2.f,%2.f @ %2.2f", disp.translation.x, disp.translation.y, disp.rotation * RAD_T_DEG);
   // printf("Updating particles from odometry: %2.2f,%2.2f @ %2.2f\n", disp.translation.x, disp.translation.y, disp.rotation * RAD_T_DEG);
 
+  double odometryValue = sqrt(pow(disp.translation.x , 2) + pow(disp.translation.y , 2));
+  // printf("odometryValue: %2.f\n", odometryValue);
+  odometryValue = min(odometryValue, 10.0);
+  sigma_x = max(5.0, odometryValue);
+  sigma_y = max(5.0, odometryValue);
+
   bool landmarksSeenFlag = landmarksSeen();
 
   // add random particles only when you see beacons
@@ -178,43 +188,135 @@ void ParticleFilter::processFrame() {
 
   // resample normalizes the probablities to uniform
   // resample only when you see beacons
-  if(landmarksSeenFlag && computeEntropy() < entropy_thresh) {
+  if(/*landmarksSeenFlag && */computeEntropy() < entropy_thresh) {
+    // printf("\n=============== Resampling particles ===============\n");
     resampleParticles();
     normalizeWeights();
   }
+  else
+  {
+    // printf("\n=============== Not resampling particles ===============\n");
+  }
 }
 
-const Pose2D& ParticleFilter::pose() const {
-  if(dirty_) {
-    // Compute the mean pose estimate
-    mean_ = Pose2D();
+double euclid_dist(Particle a, Particle b) {
+  return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
+}
 
-    double sin_ = 0.0;
-    double cos_ = 0.0;
+int getNearestCluster(Particle p, vector<Particle> &centroids) {
+  double dist = INT_MAX;
+  double idx = 0;
+  for(int i = 0; i < centroids.size(); ++i) {
+    double d = euclid_dist(p, centroids[i]);
+    if(d < dist) {
+      dist = d;
+      idx = i;
+    }
+  }
+  return idx;
+}
 
-    for(const auto& p : particles()) {
-      mean_.translation.x += exp(p.w) * p.x;
-      mean_.translation.y += exp(p.w) * p.y;
-      sin_ += exp(p.w) * sin(p.t);
-      cos_ += exp(p.w) * cos(p.t);
+Particle computeCentroid(vector<Particle> &cluster) {
+  Particle p = {0.0, 0.0, 0.0, 0.0};
+
+  for(int i = 0; i < cluster.size(); ++i) {
+    p.x += cluster[i].x;
+    p.y += cluster[i].y;
+  }
+
+  p.x /= (double) cluster.size();
+  p.y /= (double) cluster.size();
+
+  return p;
+}
+
+void recomputeCentroids(vector<Particle> &centroids, vector<vector<Particle> > &clusters) {
+  for(int i = 0; i < centroids.size(); ++i) {
+    centroids[i] = computeCentroid(clusters[i]);
+  }
+}
+
+Particle ParticleFilter::getKmeansPose() {
+  vector<Particle> centroids(kmeans_k_);
+
+  // initialise the centroids
+  for(int i = 0; i < kmeans_k_; ++i) {
+    int idx = rand() % particles().size();
+    centroids[i] = particles()[idx];
+  }
+
+  vector<vector<Particle> > clusters(kmeans_k_);
+
+  for(int _ = 0; _ < kmeans_iterations_; ++_) {
+    clusters.clear();
+    clusters.resize(kmeans_k_);
+    // run k means interation
+    for(auto p : particles()) {
+      int cidx = getNearestCluster(p, centroids);
+      clusters[cidx].push_back(p);
     }
 
-    // mean_.translation.x /= (double) n_particles;
-    // mean_.translation.y /= (double) n_particles;
-    double angle_estimate = atan2(sin_, cos_);
-    mean_.rotation = angle_estimate > 0 ? angle_estimate : 2.0 * M_PI + angle_estimate;
+    // recompute centroids
+    recomputeCentroids(centroids, clusters);
+  }
 
-    // Pose2D var_;
+  int size = 0;
+  int cidx = 0;
+  for(int i = 0; i < kmeans_k_; ++i) {
+    if(size < clusters[i].size()) {
+      size = clusters[i].size();
+      cidx = i;
+    }
+  }
 
-    // for(const auto& p : particles()) {
-    //   var_.translation.x += (p.x - mean_.translation.x) * (p.x - mean_.translation.x);
-    //   var_.translation.y += (p.y - mean_.translation.y) * (p.y - mean_.translation.y);
-    //   var_.rotation += (p.t - mean_.rotation) * (p.t - mean_.rotation);
-    // }
+  Particle kmeans_pose = {0.0, 0.0, 0.0, 0.0};
+  double sin_ = 0.0;
+  double cos_ = 0.0;
 
-    // var_.translation.x /= (double) n_particles;
-    // var_.translation.y /= (double) n_particles;
-    // var_.rotation /= (double) n_particles;
+  for(int i = 0; i < clusters[cidx].size(); ++i) {
+    auto p = clusters[cidx][i];
+    kmeans_pose.x += p.x;
+    kmeans_pose.y += p.y;
+    sin_ += sin(p.t);
+    cos_ += cos(p.t);
+  }
+
+  kmeans_pose.x /= clusters[cidx].size();
+  kmeans_pose.y /= clusters[cidx].size();
+  double angle_estimate = atan2(sin_, cos_);
+  kmeans_pose.t = angle_estimate > 0 ? angle_estimate : 2.0 * M_PI + angle_estimate;
+
+  return kmeans_pose;
+}
+
+Pose2D& ParticleFilter::pose() {
+  if(dirty_) {
+    #ifndef KMEANS_ENABLED
+      // Compute the mean pose estimate
+      mean_ = Pose2D();
+
+      double sin_ = 0.0;
+      double cos_ = 0.0;
+
+      for(const auto& p : particles()) {
+        mean_.translation.x += exp(p.w) * p.x;
+        mean_.translation.y += exp(p.w) * p.y;
+        sin_ += exp(p.w) * sin(p.t);
+        cos_ += exp(p.w) * cos(p.t);
+      }
+
+      // mean_.translation.x /= (double) n_particles;
+      // mean_.translation.y /= (double) n_particles;
+      double angle_estimate = atan2(sin_, cos_);
+      mean_.rotation = angle_estimate > 0 ? angle_estimate : 2.0 * M_PI + angle_estimate;
+    #endif
+
+    #ifdef KMEANS_ENABLED
+      Particle kpose = getKmeansPose();
+      mean_.translation.x = kpose.x;
+      mean_.translation.y = kpose.y;
+      mean_.rotation = kpose.t;
+    #endif
 
     dirty_ = false;
 
