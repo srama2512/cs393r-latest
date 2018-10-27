@@ -14,6 +14,20 @@ import cfgstiff
 from state_machine import StateMachine, Node, C, T, F, LoopingStateMachine
 from pid_controller import *
 
+list_of_beacons = [core.WO_BEACON_BLUE_YELLOW,
+                   core.WO_BEACON_YELLOW_BLUE,
+                   core.WO_BEACON_BLUE_PINK,
+                   core.WO_BEACON_PINK_BLUE,
+                   core.WO_BEACON_PINK_YELLOW,
+                   core.WO_BEACON_YELLOW_PINK]
+
+def updateBeaconDict(beacon_dict):
+    num_seen_beacons = 0
+    for b in list_of_beacons:
+        beacon = mem_objects.world_objects[b]
+        if beacon.seen:
+            beacon_dict[b] += 1
+
 class Playing(LoopingStateMachine):
     class Stand(Node):
         def run(self):
@@ -80,18 +94,13 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=140.0, ball_y_offset=-40.0, ball_y_threshold=10.0, vel_x=0.6, vel_y=0.3, omega=0.1):
+        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=130.0, ball_y_offset=-55.0, ball_y_threshold=7.0):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.ball_x_threshold = ball_x_threshold
             self.ball_y_offset = ball_y_offset
             self.ball_y_threshold = ball_y_threshold
-            self.vel_x = vel_x
-            self.vel_y = vel_y
-            self.omega = omega
             self.last_seen = 0
-            self.ptk_ready = False
-            self.last_ptk_ready = 0.0
 
             self.forward_compensation = 100.0
             self.pid_position = PIDPosition()
@@ -136,12 +145,7 @@ class Playing(LoopingStateMachine):
             self.goal_x_threshold = goal_x_threshold
             self.ball_x_threshold = ball_x_threshold
             self.ball_y_threshold = ball_y_threshold
-            self.vel_x = vel_x
-            self.vel_y = vel_y
-            self.omega = omega
             self.last_seen = 0
-            self.dribble = False
-            self.goal_not_seen = False
 
             self.pid_position = PIDPosition()
             self.pid_position.max_t_res = 0.2
@@ -151,9 +155,17 @@ class Playing(LoopingStateMachine):
             self.ball_fwd_compensation = 150
             self.ball_fwd_gap = 200
 
+            self.beacon_dict = {k:0 for k in list_of_beacons}
+
+        def reset(self):
+            super(Playing.Dribble, self).reset()
+            self.beacon_dict = {k:0 for k in list_of_beacons}            
+
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
             goal = memory.world_objects.getObjPtr(core.WO_UNKNOWN_GOAL)
+
+            updateBeaconDict(self.beacon_dict)
 
             # if goal.seen and ball.seen:
             if ball.seen:
@@ -161,12 +173,15 @@ class Playing(LoopingStateMachine):
                 ball_fwd_dist = ball.visionDistance * math.cos(ball.visionBearing)
                 #sys.stdout.flush()
                 if goal.seen:
-                    self.goal_not_seen = False
                     goal_vision_bearing = goal.visionBearing
                     goal_fwd_dist = goal.visionDistance * math.cos(goal.visionBearing)
                 else:
-                    self.goal_not_seen = True
-                    goal_vision_bearing = 10.0 # self.goal_b_threshold + 1.0
+                    BY_cnt = self.beacon_dict[core.WO_BEACON_BLUE_YELLOW] + self.beacon_dict[core.WO_BEACON_YELLOW_BLUE]
+                    BP_cnt = self.beacon_dict[core.WO_BEACON_PINK_BLUE] + self.beacon_dict[core.WO_BEACON_BLUE_PINK]
+                    if BY_cnt > BP_cnt:
+                        goal_vision_bearing = 10.0 # self.goal_b_threshold + 1.0
+                    else:
+                        goal_vision_bearing = -10.0
                     goal_fwd_dist = self.goal_x_threshold + 1.0
 
                 print('===> Dribble: visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(goal_fwd_dist, 
@@ -175,7 +190,6 @@ class Playing(LoopingStateMachine):
                                                                                                                                                ball_fwd_dist))
                 if abs(goal_vision_bearing) < self.goal_b_threshold and abs(ball_side_dist) < self.ball_y_threshold:
                     print('===> Dribble: Reached within bearing of the goal and distance of the ball!')
-                    self.dribble = True
 
                     if abs(goal_fwd_dist) < self.goal_x_threshold:
                         print('===> Dribble: Reached the goal!')
@@ -187,38 +201,7 @@ class Playing(LoopingStateMachine):
                 else:
                     (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist - self.ball_fwd_gap, ball_side_dist, goal_vision_bearing))
 
-                # if goal_vision_bearing < -self.goal_b_threshold:
-                #     omega = -self.omega
-                # elif goal_vision_bearing > self.goal_b_threshold:
-                #     omega = self.omega
-                # else:
-                #     omega = 0.0
-
-                # if ball_side_dist < -self.ball_y_threshold:
-                #     vel_y = -self.vel_y
-                # elif ball_side_dist > self.ball_y_threshold:
-                #     vel_y = self.vel_y
-                # else:
-                #     vel_y = 0.0
-
-                # if self.dribble:
-                #     vel_x = self.vel_x
-                #     print('===> Dribble: walking the ball')
-                # else:
-                #     if ball_fwd_dist < -self.ball_x_threshold:
-                #         vel_x = -self.vel_x
-                #     elif ball_fwd_dist > self.ball_x_threshold:
-                #         vel_x = self.vel_x
-                #     else:
-                #         vel_x = 0.0
-
-                # self.last_seen = self.getTime()
-                # self.dribble = False
-                # if self.goal_not_seen:
-                #     omega *= 2
-                print (vel_x, vel_y, vel_t)
                 commands.setWalkVelocity(vel_x, vel_y, vel_t)
-
             else:
                 print('===> Dribble: Not seeing the ball')
                 if self.getTime() - self.last_seen > 2.0:
@@ -360,7 +343,7 @@ class Playing(LoopingStateMachine):
         self.add_transition(ptk, C, stand_at_ball)
         self.add_transition(ptk, F, dribble)
         self.add_transition(stand_at_ball, C, kick)
-        self.add_transition(kick, C, stand)
+        self.add_transition(kick, C, dribble)
 
         #self.trans(self.PositionToKick(), C)
         # self.trans(self.Stand(), C, self.Kick(), C, self.Stand(), C, pose.Sit(), C, self.Off())
