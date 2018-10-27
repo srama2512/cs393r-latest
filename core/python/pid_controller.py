@@ -16,6 +16,10 @@ from memory import joint_commands
 import pose
 import cfgstiff
 
+
+def clip(val, mi, mx):
+    return max(min(val, mx), mi)
+
 class PIDController(object):
     def __init__(self, cp=0., ci=0., cd=0.):
         self.cp = cp
@@ -57,6 +61,7 @@ class PIDPosition(object):
         self.pid_x = PIDController()
         self.pid_y = PIDController()
         self.pid_t = PIDController()
+        self.max_t_res = 1.0
 
     def set_const_x(self, cp, ci, cd):
         self.pid_x.set_constants(cp, ci, cd)
@@ -71,6 +76,8 @@ class PIDPosition(object):
         res_x = self.pid_x.update(curr[0], target[0])
         res_y = self.pid_y.update(curr[1], target[1])
         res_t = self.pid_t.update(curr[2], target[2])
+
+        res_t = clip(res_t, -self.max_t_res, self.max_t_res)
 
         print ("PIDController: x : ", "curr_error: ", self.pid_x.curr_error, "curr-prev: ", self.pid_x.curr_error-self.pid_x.prev_error, "cumulative_error: ", self.pid_x.cumulative_error)
         print ("PIDController: y : ", "curr_error: ", self.pid_y.curr_error, "curr-prev: ", self.pid_y.curr_error-self.pid_y.prev_error, "cumulative_error: ", self.pid_y.cumulative_error)

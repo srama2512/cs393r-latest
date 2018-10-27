@@ -80,7 +80,7 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=130.0, ball_y_offset=-40.0, ball_y_threshold=10.0, vel_x=0.6, vel_y=0.3, omega=0.1):
+        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=140.0, ball_y_offset=-40.0, ball_y_threshold=10.0, vel_x=0.6, vel_y=0.3, omega=0.1):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.ball_x_threshold = ball_x_threshold
@@ -130,7 +130,7 @@ class Playing(LoopingStateMachine):
                     self.postFailure()
 
     class Dribble(Node):
-        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=1200.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
+        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=1000.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
             super(Playing.Dribble, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.goal_x_threshold = goal_x_threshold
@@ -142,6 +142,14 @@ class Playing(LoopingStateMachine):
             self.last_seen = 0
             self.dribble = False
             self.goal_not_seen = False
+
+            self.pid_position = PIDPosition()
+            self.pid_position.max_t_res = 0.2
+            self.pid_position.set_const_x(1.2e-3, 0., 0.)
+            self.pid_position.set_const_y(4.5e-3, 1e-4, 0., 1000.0)
+            self.pid_position.set_const_t(1.2, 0., 0.)
+            self.ball_fwd_compensation = 150
+            self.ball_fwd_gap = 200
 
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
@@ -171,43 +179,50 @@ class Playing(LoopingStateMachine):
 
                     if abs(goal_fwd_dist) < self.goal_x_threshold:
                         print('===> Dribble: Reached the goal!')
-                        sys.stdout.flush()
+                        (vel_x, vel_y, vel_t) = (0., 0., 0.)
                         self.finish()
-
-                if goal_vision_bearing < -self.goal_b_threshold:
-                    omega = -self.omega
-                elif goal_vision_bearing > self.goal_b_threshold:
-                    omega = self.omega
-                else:
-                    omega = 0.0
-
-                if ball_side_dist < -self.ball_y_threshold:
-                    vel_y = -self.vel_y
-                elif ball_side_dist > self.ball_y_threshold:
-                    vel_y = self.vel_y
-                else:
-                    vel_y = 0.0
-
-                if self.dribble:
-                    vel_x = self.vel_x
-                    print('===> Dribble: walking the ball')
-                else:
-                    if ball_fwd_dist < -self.ball_x_threshold:
-                        vel_x = -self.vel_x
-                    elif ball_fwd_dist > self.ball_x_threshold:
-                        vel_x = self.vel_x
                     else:
-                        vel_x = 0.0
+                        (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist + self.ball_fwd_compensation, \
+                            ball_side_dist, goal_vision_bearing))
+                else:
+                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist - self.ball_fwd_gap, ball_side_dist, goal_vision_bearing))
 
-                self.last_seen = self.getTime()
-                self.dribble = False
-                if self.goal_not_seen:
-                    omega *= 2
-                commands.setWalkVelocity(vel_x, vel_y, omega)
+                # if goal_vision_bearing < -self.goal_b_threshold:
+                #     omega = -self.omega
+                # elif goal_vision_bearing > self.goal_b_threshold:
+                #     omega = self.omega
+                # else:
+                #     omega = 0.0
+
+                # if ball_side_dist < -self.ball_y_threshold:
+                #     vel_y = -self.vel_y
+                # elif ball_side_dist > self.ball_y_threshold:
+                #     vel_y = self.vel_y
+                # else:
+                #     vel_y = 0.0
+
+                # if self.dribble:
+                #     vel_x = self.vel_x
+                #     print('===> Dribble: walking the ball')
+                # else:
+                #     if ball_fwd_dist < -self.ball_x_threshold:
+                #         vel_x = -self.vel_x
+                #     elif ball_fwd_dist > self.ball_x_threshold:
+                #         vel_x = self.vel_x
+                #     else:
+                #         vel_x = 0.0
+
+                # self.last_seen = self.getTime()
+                # self.dribble = False
+                # if self.goal_not_seen:
+                #     omega *= 2
+                print (vel_x, vel_y, vel_t)
+                commands.setWalkVelocity(vel_x, vel_y, vel_t)
 
             else:
                 print('===> Dribble: Not seeing the ball')
                 if self.getTime() - self.last_seen > 2.0:
+                    commands.setWalkVelocity(0., 0., 0.)
                     self.postFailure()
 
     class RotateBody(Node):
