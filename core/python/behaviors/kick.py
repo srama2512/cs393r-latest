@@ -12,7 +12,7 @@ import pose
 import commands
 import cfgstiff
 from state_machine import StateMachine, Node, C, T, F, LoopingStateMachine
-
+from pid_controller import *
 
 class Playing(LoopingStateMachine):
     class Stand(Node):
@@ -80,7 +80,7 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=160.0, ball_y_offset=-30.0, ball_y_threshold=10.0, vel_x=0.6, vel_y=0.6, omega=0.1):
+        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=130.0, ball_y_offset=-40.0, ball_y_threshold=10.0, vel_x=0.6, vel_y=0.3, omega=0.1):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.ball_x_threshold = ball_x_threshold
@@ -92,6 +92,12 @@ class Playing(LoopingStateMachine):
             self.last_seen = 0
             self.ptk_ready = False
             self.last_ptk_ready = 0.0
+
+            self.forward_compensation = 100.0
+            self.pid_position = PIDPosition()
+            self.pid_position.set_const_x(1.2e-3, 0., 0.)
+            self.pid_position.set_const_y(3.0e-3, 1e-4, 0., 1000.0)
+            self.pid_position.set_const_t(1.2, 0., 0.)
 
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
@@ -105,7 +111,6 @@ class Playing(LoopingStateMachine):
                                                                                                                                                goal.visionBearing, 
                                                                                                                                                ball_side_dist,
                                                                                                                                                ball_fwd_dist))
-                #sys.stdout.flush()
 
                 if abs(goal.visionBearing) < self.goal_b_threshold and abs(ball_side_dist - self.ball_y_offset) < self.ball_y_threshold and abs(ball_fwd_dist) < self.ball_x_threshold:
                     print('===> PositionToKick: Reached within bearing of the goal and distance of the ball!')
@@ -113,51 +118,19 @@ class Playing(LoopingStateMachine):
                                                                                                                                                goal.visionBearing, 
                                                                                                                                                ball_side_dist,
                                                                                                                                                ball_fwd_dist))
-                    sys.stdout.flush()
-                    
-                    if not self.ptk_ready:
-                        self.ptk_ready = True
-                        self.last_ptk_ready = self.getTime()
-                        commands.setWalkVelocity(0.0, 0.0, 0.0)
-                    else:
-                        if self.getTime() - self.last_ptk_ready > 0.1:
-                            self.finish()
+                    commands.setWalkVelocity(0.0, 0.0, 0.0)
+                    self.finish()
                 else:
-                    self.ptk_ready = False
-
-                if goal.visionBearing < -self.goal_b_threshold:
-                    omega = -self.omega
-                elif goal.visionBearing > self.goal_b_threshold:
-                    omega = self.omega
-                else:
-                    omega = 0.0
-
-                if ball_side_dist - self.ball_y_offset < -self.ball_y_threshold:
-                    vel_y = -self.vel_y
-                elif ball_side_dist - self.ball_y_offset > self.ball_y_threshold:
-                    vel_y = self.vel_y
-                else:
-                    vel_y = 0.0
-
-                if ball_fwd_dist < -self.ball_x_threshold:
-                    vel_x = -self.vel_x
-                elif ball_fwd_dist > self.ball_x_threshold:
-                    vel_x = self.vel_x
-                else:
-                    vel_x = 0.0
-
-                self.last_seen = self.getTime()
-                
-                if not self.ptk_ready:
-                    print('===> PositionToKick: Walk velocities: {}, {}, {}'.format(vel_x, vel_y, omega))
-                    commands.setWalkVelocity(vel_x, vel_y, omega)
+                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist, ball_side_dist - self.ball_y_offset, goal.visionBearing))
+                    print ("===> PositionToKick: vel_x : ", vel_x, "vel_y :", vel_y, "vel_t : ", vel_t)
+                    commands.setWalkVelocity(vel_x, vel_y, vel_t)
             else:
                 print('===> PositionToKick: Not seeing either the ball (or) the goal')
                 if self.getTime() - self.last_seen > 2.0:
                     self.postFailure()
 
     class Dribble(Node):
-        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=800.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
+        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=1200.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
             super(Playing.Dribble, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.goal_x_threshold = goal_x_threshold
@@ -347,11 +320,11 @@ class Playing(LoopingStateMachine):
         stand_at_ball = self.Stand()
         dribble = self.Dribble()
         ptk = self.PositionToKick()
-        center = self.HeadPos(0, 0)
+        center = self.HeadPos(-22, 0)
         kick = self.Kick()
         lookatball = self.LookAtBall(delta_pan=12, duration=0.2)
-        leftSearch = self.SearchForBall(75, 0, 4.0)
-        rightSearch = self.SearchForBall(-75, 0, 4.0)
+        leftSearch = self.SearchForBall(75, -22, 4.0)
+        rightSearch = self.SearchForBall(-75, -22, 4.0)
         rotateBody = self.RotateBody()
 
         # self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
@@ -375,7 +348,7 @@ class Playing(LoopingStateMachine):
         self.add_transition(kick, C, stand)
 
         #self.trans(self.PositionToKick(), C)
-        # self.trans(self.Stand(), C, self.Kick(), C, self.Stand(),
-        #           C, pose.Sit(), C, self.Off())
+        # self.trans(self.Stand(), C, self.Kick(), C, self.Stand(), C, pose.Sit(), C, self.Off())
+        # self.trans(self.Stand(), C, self.Kick(), C, self.Unstiffen(), C)
 
         # self.trans(self.Stand(), C, self.Unstiffen(), C)

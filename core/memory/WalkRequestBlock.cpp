@@ -84,6 +84,13 @@ void WalkRequestBlock::setWalk(float x, float y, float rotation) {
   is_rotate_ = false;
 }
 
+void WalkRequestBlock::setWalkVelocity(float velX, float velY, float velTheta) {
+    float scale = max(sqrt(velX * velX + velY * velY), (float) 1.0);
+    velX /= scale;
+    velY /= scale;
+    setWalk(velX, velY, velTheta);
+}
+
 void WalkRequestBlock::setPedanticWalk(float x, float y, float rotation) {
   set(WALK,Pose2D(rotation,x,y),true,true);
 }

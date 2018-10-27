@@ -6,6 +6,8 @@
 #include <common/InterfaceInfo.h>
 #include <common/Kicks.h>
 
+#include <cmath>
+
 #include <memory/BehaviorBlock.h>
 #include <schema/gen/WalkRequestBlock_generated.h>
 
@@ -39,6 +41,7 @@ DECLARE_INTERNAL_SCHEMA(struct WalkRequestBlock : public MemoryBlock {
     void wait();
     void setStep(bool isLeft, float x, float y, float rotation);
     void setWalk(float x, float y, float rotation);
+    void setWalkVelocity(float velX, float velY, float velTheta);
     void setPedanticWalk(float x, float y, float rotation);
     void setFalling();
     void setKick(float distance, float heading, bool with_left, bool step_into_kick);

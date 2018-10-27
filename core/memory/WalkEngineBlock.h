@@ -8,6 +8,8 @@
 #include <common/RingQueue.h>
 #include <common/RingQueueWithSum.h>
 
+#include <cmath>
+
 #define MAX_PREVIEW_FRAMES 100
 #define MAX_SENSOR_DELAY 25
 

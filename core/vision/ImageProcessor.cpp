@@ -316,9 +316,9 @@ void ImageProcessor::detectBall() {
     ball->visionElevation = cmatrix_.elevation(p);
     ball->visionDistance = cmatrix_.groundDistance(p);
 
-    //cout << "Ball detected at: " << ballc->centerX << "," << ballc->centerY << endl;
-    //cout << "Ball pan: " << ball->visionBearing << "   Ball tilt: " << ball->visionElevation << endl;
-    //cout << "Ball distance: " << ball->visionDistance << endl << endl;
+    // cout << "Ball detected at: " << ballc->centerX << "," << ballc->centerY << endl;
+    // cout << "Ball pan: " << ball->visionBearing << "   Ball tilt: " << ball->visionElevation << endl;
+    // cout << "Ball distance: " << ball->visionDistance << endl << endl;
 
     ball->seen = true;
 
@@ -352,7 +352,7 @@ void ImageProcessor::detectGoal() {
 
     // cout << "Goal pan: " << goal->visionBearing << "   Goal tilt: " << goal->visionElevation << endl;
     // cout << "Goal distance: " << goal->visionDistance << endl << endl;
-    goal->seen = false;//true;
+    goal->seen = true;//true;
 }
 
 
@@ -469,7 +469,7 @@ std::vector<BallCandidate*> ImageProcessor::getBallCandidates() {
           }
         }
         // If the ball is near bottom of image, it can still be green
-        if (green_count / tot_count < 0.2 && (yend - ystart) > 5) {
+        if (camera_ == Camera::TOP && green_count / tot_count < 0.2 && (yend - ystart) > 5) {
           continue;
         }
 
