@@ -169,6 +169,7 @@ class Playing(LoopingStateMachine):
 
             # if goal.seen and ball.seen:
             if ball.seen:
+                self.last_seen = self.getTime()
                 ball_side_dist = ball.visionDistance * math.sin(ball.visionBearing)
                 ball_fwd_dist = ball.visionDistance * math.cos(ball.visionBearing)
                 #sys.stdout.flush()

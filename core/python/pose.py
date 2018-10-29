@@ -171,18 +171,18 @@ class StandStraight(Task):
 
 class Squat(Task):
   def __init__(self, time = 3.0):
-    super(Squat, self).__init__(self, time=time)
+    super(Squat, self).__init__(time=time)
     self.setChain([ 
       PoseSequence(
-        cfgpose.goalieSquatPart1, 0.4,
-        cfgpose.goalieSquatPart2, 0.2,
+        cfgpose.goalieSquatPart1, 1.2,
+        cfgpose.goalieSquatPart2, 0.6,
         cfgpose.goalieSquatPart2, time,
-        cfgpose.goalieSquat5, 0.2,
-        cfgpose.goalieSquat5, 0.3,
-        cfgpose.goalieSquatPart2, 0.3,
-        cfgpose.goalieSquatGetup15, 0.4,
-        cfgpose.goalieSquatGetup2, 0.6,
-        cfgpose.goalieSquatGetup7, 0.3
+        cfgpose.goalieSquat5, 0.6,
+        cfgpose.goalieSquat5, 0.9,
+        cfgpose.goalieSquatPart2, 0.9,
+        cfgpose.goalieSquatGetup15, 1.2,
+        cfgpose.goalieSquatGetup2, 1.8,
+        cfgpose.goalieSquatGetup7, 0.9
       ),
       Stand()
     ])
@@ -206,6 +206,34 @@ class BlockLeft(Task):
       cfgpose.sittingPoseNoArms, 2.0,
       cfgpose.standingPose, 2.0
     ))
+
+# class BlockRightAndStand(Task):
+#   def __init__(self, time = 3.0):
+#     super(BlockRightAndStand, self).__init__(time=time)
+#     self.setChain([
+#       PoseSequence(
+#       cfgpose.blockright, 1.0,
+#       cfgpose.blockright, self.time, 
+#       #cfgpose.sittingPoseNoArms, 2.0,
+#       #cfgpose.standingPose, 2.0
+#     ),
+#     Sit(),
+#     Stand()
+#   ])
+
+# class BlockLeftAndStand(Task):
+#   def __init__(self, time = 3.0):
+#     super(BlockLeftAndStand, self).__init__(time=time)
+#     self.setChain([
+#       PoseSequence(
+#       cfgpose.blockleft, 1.0,
+#       cfgpose.blockleft, self.time, 
+#       #cfgpose.sittingPoseNoArms, 2.0,
+#       #cfgpose.standingPose, 2.0
+#     ),
+#     Sit(),
+#     Stand()
+#   ])
 
 class ToPoseArms(MultiTask):
   def __init__(self, pose, time = 0.5):
@@ -275,4 +303,52 @@ class BlockCenterStand(Task):
       st.transition(st.init)
       self.finish()
       
+class BlockRightAndStand(Task):
+  def __init__(self, time = 6.0):
+    super(BlockRightAndStand, self).__init__(time=time)
+    self.state = state_machine.SimpleStateMachine('init', 'blockright', 'sitting', 'standing', 'finish')
 
+  def run(self):
+    commands.setStiffness(cfgstiff.One, 0.3)
+    st = self.state
+
+    if st.inState(st.init):
+      st.transition(st.blockright)
+      return ToPose(cfgpose.blockright, 0.5)
+    if st.inState(st.blockright):
+      st.transition(st.sitting)
+      return ToPose(cfgpose.blockright, 0.5)
+    elif st.inState(st.sitting):
+      st.transition(st.standing)
+      return ToPose(cfgpose.sittingPoseNoArms, 3.0)
+    elif st.inState(st.standing):
+      st.transition(st.finish)
+      return ToPose(cfgpose.standingPose, 2.0)
+    elif st.inState(st.finish):
+      st.transition(st.init)
+      self.finish()
+
+class BlockLeftAndStand(Task):
+  def __init__(self, time = 6.0):
+    super(BlockLeftAndStand, self).__init__(time=time)
+    self.state = state_machine.SimpleStateMachine('init', 'blockleft', 'sitting', 'standing', 'finish')
+
+  def run(self):
+    commands.setStiffness(cfgstiff.One, 0.3)
+    st = self.state
+
+    if st.inState(st.init):
+      st.transition(st.blockleft)
+      return ToPose(cfgpose.blockleft, 0.5)
+    elif st.inState(st.blockleft):
+      st.transition(st.sitting)
+      return ToPose(cfgpose.blockleft, 0.5)
+    elif st.inState(st.sitting):
+      st.transition(st.standing)
+      return ToPose(cfgpose.sittingPoseNoArms, 3.0)
+    elif st.inState(st.standing):
+      st.transition(st.finish)
+      return ToPose(cfgpose.standingPose, 2.0)
+    elif st.inState(st.finish):
+      st.transition(st.init)
+      self.finish()

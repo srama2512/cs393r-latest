@@ -12,7 +12,7 @@ import UTdebug
 import math
 import memory
 from memory import joint_commands
-from pose import BlockLeftStand, BlockRightStand, BlockCenterStand
+from pose import BlockLeftAndStand, BlockRightAndStand, Squat, BlockCenterStand#BlockLeftStand, BlockRightStand
 
 class Stand(Node):
     def run(self):
@@ -44,10 +44,11 @@ class Blocker(Node):
         self.prev_time = self.getTime()
         self.vel_x = 0
         self.vel_y = 0
-        self.beta = 0.5
-        self.delta_time = 0.75
+        self.beta_x = 0.0
+        self.beta_y = 0.5
+        self.delta_time = 1.20
         self.y_dist_thresh = 100
-        self.y_max_dist_thresh = 370
+        self.y_max_dist_thresh = 400
 
     def reset(self):
         super(Blocker, self).reset()
@@ -67,13 +68,14 @@ class Blocker(Node):
             ball_y = ball.distance * math.sin(ball.bearing)
 
             duration = self.getTime() - self.prev_time + 1e-5
-            print('===> Keeper: Ball seen: duration: {:.3f}, prev_x: {:.3f}, prev_y: {:.3f}, ball_x: {:.3f}, ball_y: {:.3f}  vel_x: {:.3f}  vel_y: {:.3f}'.format(duration, self.prev_x, self.prev_y, ball_x, ball_y, self.vel_x, self.vel_y))
+            print('===> Keeper: Ball seen: duration: {:.3f}, prev_x: {:.3f}, prev_y: {:.3f}, ball_x: {:.3f}, ball_y: {:.3f}  vel_x: {:.3f}  vel_y: {:.3f}'.format(\
+                                                    duration, self.prev_x, self.prev_y, ball_x, ball_y, self.vel_x, self.vel_y))
 
             vel_x = (ball_x - self.prev_x) / duration
             vel_y = (ball_y - self.prev_y) / duration
 
-            self.vel_x = self.beta * self.vel_x + (1-self.beta) * vel_x
-            self.vel_y = self.beta * self.vel_y + (1-self.beta) * vel_y
+            self.vel_x = self.beta_x * self.vel_x + (1-self.beta_x) * vel_x
+            self.vel_y = self.beta_y * self.vel_y + (1-self.beta_y) * vel_y
 
             self.prev_time = self.getTime()
             self.prev_x = ball_x
@@ -84,7 +86,7 @@ class Blocker(Node):
                 time_to_reach = (0 - ball_x) / (self.vel_x + 1e-5)
                 print("===> Ball is close, blocking!  vel_x: {:.3f}  vel_y: {:.3f}".format(self.vel_x, self.vel_y))
                 y_pred = time_to_reach * self.vel_y + ball_y
-                print('Predicted y at end: {}'.format(y_pred))
+                print('Predicted y at end of {} secs: {}'.format(time_to_reach, y_pred))
 
                 if abs(y_pred) < self.y_max_dist_thresh:
 
@@ -111,14 +113,14 @@ class ResetNode(Node):
 class Playing(StateMachine):
     def setup(self):
         blocker = Blocker()
-        blocks = {"left": BlockLeftStand(),
-                  "right": BlockRightStand(),
-                  "center": BlockCenterStand()
+        blocks = {"left": BlockLeftAndStand(time=6.0),#BlockLeftStand(),
+                  "right": BlockRightAndStand(time=6.0),#BlockRightStand(),
+                  "center": BlockCenterStand(time=3.0)
                   }
         stand = Stand()
         center = HeadPos(0, 0)
         for name in blocks:
             b = blocks[name]
             # self.add_transition(stand, C, blocker, S(name), b, T(1), ResetNode(b), T(1), blocker, C, stand)
-            self.add_transition(stand, C, blocker, S(name), b, T(2), blocker, C, stand)
+            self.add_transition(stand, C, blocker, S(name), b, T(10), blocker, C, stand)
 
