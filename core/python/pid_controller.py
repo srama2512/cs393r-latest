@@ -83,15 +83,15 @@ class PIDPosition(object):
         res_x = clip(res_x, -self.max_x_res, self.max_x_res)
         res_y = clip(res_y, -self.max_y_res, self.max_y_res)
 
-        # print ("PIDController: x : ", "curr_error: ", self.pid_x.curr_error, "curr-prev: ", self.pid_x.curr_error-self.pid_x.prev_error, "cumulative_error: ", self.pid_x.cumulative_error)
-        # print ("PIDController: y : ", "curr_error: ", self.pid_y.curr_error, "curr-prev: ", self.pid_y.curr_error-self.pid_y.prev_error, "cumulative_error: ", self.pid_y.cumulative_error)
-        # print ("PIDController: t : ", "curr_error: ", self.pid_t.curr_error, "curr-prev: ", self.pid_t.curr_error-self.pid_t.prev_error, "cumulative_error: ", self.pid_t.cumulative_error)
+        print ("PIDController: x : ", "curr_error: ", self.pid_x.curr_error, "curr-prev: ", self.pid_x.curr_error-self.pid_x.prev_error, "cumulative_error: ", self.pid_x.cumulative_error)
+        print ("PIDController: y : ", "curr_error: ", self.pid_y.curr_error, "curr-prev: ", self.pid_y.curr_error-self.pid_y.prev_error, "cumulative_error: ", self.pid_y.cumulative_error)
+        print ("PIDController: t : ", "curr_error: ", self.pid_t.curr_error, "curr-prev: ", self.pid_t.curr_error-self.pid_t.prev_error, "cumulative_error: ", self.pid_t.cumulative_error)
 
         return (res_x, res_y, res_t)
         
     def has_converged(self, thresh_x, thresh_y, thresh_t):
-        if abs(self.pid_x.curr_error) < thresh_x and
-           abs(self.pid_y.curr_error) < thresh_y and
+        if abs(self.pid_x.curr_error) < thresh_x and \
+           abs(self.pid_y.curr_error) < thresh_y and \
            abs(self.pid_t.curr_error) < thresh_t:
            return True
         return False  

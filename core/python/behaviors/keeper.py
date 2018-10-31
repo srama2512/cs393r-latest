@@ -13,7 +13,7 @@ import UTdebug
 import math
 import memory
 from memory import joint_commands
-from pose import BlockLeftAndStand, BlockRightAndStand, Squat, BlockCenterStand#BlockLeftStand, BlockRightStand
+from pose import BlockLeftAndStand, BlockRightAndStand, Squat, BlockCenterStand, Sit#BlockLeftStand, BlockRightStand
 from pid_controller import *
 
 def getBeaconCounts():
@@ -46,6 +46,7 @@ def sgn_val(x, thresh):
 class EWMA():
     # Exponentially weighted moving average
     def __init__(self, val, gamma):
+        self.init_val = val
         self.val = val
         self.gamma = gamma
 
@@ -55,6 +56,10 @@ class EWMA():
 
     def get(self):
         return self.val
+
+    def reset(self):
+        self.val = self.init_val
+
 
 class LocEWMA():
     def __init__(self, val, gamma):
@@ -90,39 +95,42 @@ class HeadPos(Node):
         def run(self):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
-class Blocker(Node):
+class BlockKeeper(Node):
     def __init__(self):
-        super(Blocker, self).__init__()
         self.prev_x = 0
         self.prev_y = 0
-        self.prev_time = self.getTime()
-        self.vel_x = 0
-        self.vel_y = 0
-        self.beta_x = 0.0
-        self.beta_y = 0.5
+        self.set_previous = False
+        self.gamma_vel_x = 0.8
+        self.gamma_vel_y = 0.5
+        self.vel_x = EWMA(0.0, gamma=self.gamma_vel_x)
+        self.vel_y = EWMA(0.0, gamma=self.gamma_vel_y)
+        
         self.delta_time = 1.20
         self.y_dist_thresh = 100
-        self.y_max_dist_thresh = 400
-        self.last_ball_seen = self.getTime()
+        self.y_max_dist_thresh = 700
         self.miss_thresh = 2.0
         self.upper_thresh_x = 150.0
         self.upper_thresh_y = 80.0
         self.upper_thresh_t = 0.25 
+        super(BlockKeeper, self).__init__()
+        self.last_ball_seen = self.getTime()
+        self.prev_time = self.getTime()
 
     def reset(self):
-        super(Blocker, self).reset()
+        super(BlockKeeper, self).reset()
 
         self.prev_x = 0.0
         self.prev_y = 0.0
+        self.set_previous = False
         self.prev_time = self.getTime()
-        self.vel_x = 0.0
-        self.vel_y = 0.0
+        self.vel_x.reset()
+        self.vel_y.reset()
         self.last_ball_seen = self.getTime()
 
     def run(self):
         ball = mem_objects.world_objects[core.WO_BALL_KF]
         # commands.setHeadPan(ball.bearing, 0.1)
-        commands.setHeadPanTilt(pan=0.0, tilt=0.0, time=2.0)
+        commands.setHeadPanTilt(pan=0.0, tilt=-20.0, time=2.0)
         num_seen_beacons = getBeaconCounts()
         robot_state = mem_objects.memory.world_objects.getObjPtr(mem_objects.memory.robot_state.WO_SELF)
         locX, locY = robot_state.loc.x, robot_state.loc.y
@@ -133,29 +141,27 @@ class Blocker(Node):
             ball_x = ball.distance * math.cos(ball.bearing)
             ball_y = ball.distance * math.sin(ball.bearing)
 
-            if abs(ball_x) > self.upper_thresh_x or abs(ball_y) > self.upper_thresh_y or abs(ball.bearing) > self.upper_thresh_t:
-                self.postSignal('strafe')
-
+            
             duration = self.getTime() - self.prev_time + 1e-5
             print('===> Keeper: Ball seen: duration: {:.3f}, prev_x: {:.3f}, prev_y: {:.3f}, ball_x: {:.3f}, ball_y: {:.3f}  vel_x: {:.3f}  vel_y: {:.3f}'.format(\
-                                                    duration, self.prev_x, self.prev_y, ball_x, ball_y, self.vel_x, self.vel_y))
+                                                    duration, self.prev_x, self.prev_y, ball_x, ball_y, self.vel_x.get(), self.vel_y.get()))
 
             vel_x = (ball_x - self.prev_x) / duration
             vel_y = (ball_y - self.prev_y) / duration
 
-            self.vel_x = self.beta_x * self.vel_x + (1-self.beta_x) * vel_x
-            self.vel_y = self.beta_y * self.vel_y + (1-self.beta_y) * vel_y
+            if self.set_previous:
+                self.vel_x.update(vel_x)
+                self.vel_y.update(vel_y)
 
             self.prev_time = self.getTime()
             self.prev_x = ball_x
             self.prev_y = ball_y
 
 
-            if ball_x + self.vel_x * self.delta_time < 0.0:
-                
-                time_to_reach = (0 - ball_x) / (self.vel_x + 1e-5)
-                print("===> Ball is close, blocking!  vel_x: {:.3f}  vel_y: {:.3f}".format(self.vel_x, self.vel_y))
-                y_pred = time_to_reach * self.vel_y + ball_y
+            if self.set_previous and (ball_x + self.vel_x.get() * self.delta_time < 0.0):
+                time_to_reach = (0 - ball_x) / (self.vel_x.get() + 1e-5)
+                print("===> Ball is close, blocking!  vel_x: {:.3f}  vel_y: {:.3f}".format(self.vel_x.get(), self.vel_y.get()))
+                y_pred = time_to_reach * self.vel_y.get() + ball_y
                 print('Predicted y at end of {} secs: {}'.format(time_to_reach, y_pred))
 
                 if abs(y_pred) < self.y_max_dist_thresh:
@@ -170,6 +176,14 @@ class Blocker(Node):
                         choice = "center"
                         print ('\n\n\n\n<------------------------- CENTER --------------------------->\n\n\n\n')
                     self.postSignal(choice)
+            elif self.set_previous:
+                # if abs(ball_x) > self.upper_thresh_x or abs(ball_y) > self.upper_thresh_y or abs(ball.bearing) > self.upper_thresh_t:
+                if abs(ball.bearing) > self.upper_thresh_t:
+                    self.postSignal('strafe')
+
+            
+            self.set_previous = True
+
         else:
             if self.miss_thresh < self.getTime() - self.last_ball_seen:
                 self.postSignal('ball')
@@ -182,6 +196,45 @@ class ResetNode(Node):
     def run(self):
         self.t_node.reset()
         self.finish()
+
+class LookForBall(Node):
+    def __init__(self, pan=0, tilt=0, duration=2.0):
+        """
+        pan: (left/right) in degrees
+        tilt: (up/down) in degrees
+        duration: time in seconds
+        """
+        super(LookForBall, self).__init__()
+        self.headRotDir = 1.0
+        self.headRotDur = 3.0
+        self.headPanLimit = 60.0 * core.DEG_T_RAD
+        self.lastShift = self.getTime()
+
+
+    def run(self):
+        """If the ball was seen, then move head towards the ball"""
+        ball = memory.world_objects.getObjPtr(core.WO_BALL)
+        if self.getTime() - self.lastShift > self.headRotDur:
+            self.lastShift = self.getTime()
+            self.headRotDir *= -1.0
+        if ball.seen:
+            self.finish()
+
+        commands.setHeadPanTilt(pan=self.headPanLimit * self.headRotDir, tilt=-10.0, time=self.headRotDur)
+
+class DelayTimer(Node):
+    def __init__(self, timer=0.5):
+        super(DelayTimer, self).__init__()
+        self.delay = timer
+        self.start_time = self.getTime()
+
+    def reset(self):
+        super(DelayTimer, self).reset()
+        self.start_time = self.getTime()
+
+    def run(self):
+        if self.getTime() - self.start_time > self.delay:
+            self.finish()
 
 class StrafeBall(Node):
     def __init__(self):
@@ -212,16 +265,19 @@ class StrafeBall(Node):
         self.gcy = 0.
         self.loc_gamma = 0.95
         self.loc_ewma = LocEWMA((1000.0, 0.0, math.pi), self.loc_gamma)
-        self.arc_radius = 450.0
+        self.arc_radius = 500.0
 
         self.thresh_x = 100.0
         self.thresh_y = 50.0
         self.thresh_t = 0.15 
 
+
     def reset(self):
+        super(StrafeBall, self).reset()
         self.lastShift = self.getTime()
         self.last_seen = self.getTime()
-        self.loc_ewma = LocEWMA((1000.0, 0.0, math.pi), self.loc_gamma)
+        # TODO - fix this
+        # self.loc_ewma = LocEWMA((1000.0, 0.0, math.pi), self.loc_gamma)
 
 
     def run(self):
@@ -289,7 +345,7 @@ class StrafeBall(Node):
             # else:
             #     target_x = ball_x
 
-            if pid_position.has_converged(self.thresh_x, self.thresh_y, self.thresh_t):
+            if self.pid_position.has_converged(self.thresh_x, self.thresh_y, self.thresh_t):
                 commands.setWalkVelocity(0.0, 0.0, 0.0)
                 commands.setHeadPanTilt(pan=0.0, tilt=-10.0, time=1.0)
                 self.finish()
@@ -306,24 +362,25 @@ class StrafeBall(Node):
                 #self.postFailure()
 
 
-class Playing(StateMachine):
+class Playing(LoopingStateMachine):
     def setup(self):
-        blocker = Blocker()
+        blocker = BlockKeeper()
         blocks = {"left": BlockLeftAndStand(time=6.0),#BlockLeftStand(),
                   "right": BlockRightAndStand(time=6.0),#BlockRightStand(),
-                  "center": BlockCenterStand(time=3.0)
+                  "center": pose.Sit()
                   }
         stand = Stand()
         strafe = StrafeBall()
         center = HeadPos(0, 0)
         look_for_ball = LookForBall()
+        delay_timer = DelayTimer(0.5)
 
         self.add_transition(stand, C, strafe, S('ball'), look_for_ball, C, strafe)
         self.add_transition(blocker, S('ball'), look_for_ball)
         self.add_transition(blocker, S('strafe'), strafe)
         for name in blocks:
             b = blocks[name]
-            self.add_transition(strafe, C, blocker, S(name), b, T(10), stand)
+            self.add_transition(strafe, C, delay_timer, C, blocker, S(name), b, T(10), stand)
 
         # self.trans(Stand(), C, StrafeBall(), C, Stand(), C)
 

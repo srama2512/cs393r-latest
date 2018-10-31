@@ -345,7 +345,7 @@ class BlockLeftAndStand(Task):
       return ToPose(cfgpose.blockleft, 0.5)
     elif st.inState(st.sitting):
       st.transition(st.standing)
-      return ToPose(cfgpose.sittingPoseNoArms, 3.0)
+      return ToPose(cfgpose.sittingPoseNoArms_v2, 3.0)
     elif st.inState(st.standing):
       st.transition(st.finish)
       return ToPose(cfgpose.standingPose, 2.0)
