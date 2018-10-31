@@ -74,21 +74,21 @@ void StreamBuffer::add(std::istream& is) {
 }
 
 void StreamBuffer::read(const unsigned char* data, IntT n) {
-  VERIFY_RESIZE;
+  // VERIFY_RESIZE;
   resize(n);
   memcpy(buffer, data, n);
   size = n;
 }
 
 void StreamBuffer::read(const char* data, IntT n) {
-  VERIFY_RESIZE;
+  // VERIFY_RESIZE;
   resize(n);
   memcpy((char*)buffer, data, n);
   size = n;
 }
 
 void StreamBuffer::read(std::istream& is, IntT n) {
-  VERIFY_RESIZE;
+  // VERIFY_RESIZE;
   resize(n);
   is.read((char*)buffer, n);
   size = n;

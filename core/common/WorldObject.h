@@ -145,6 +145,8 @@ ENUM(WorldObjectType,   // Types of objects
 
   WO_BALL_KF,
 
+  WO_GOAL_D_LINE,
+
   NUM_WORLD_OBJS,
   WO_INVALID
 );

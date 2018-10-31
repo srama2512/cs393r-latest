@@ -7,7 +7,7 @@
 #include <localization/Logging.h>
 #include <common/Field.h>
 
-#define KMEANS_ENABLED
+// #define KMEANS_ENABLED
 
 class ParticleFilter {
   public:
@@ -38,15 +38,25 @@ class ParticleFilter {
     int kmeans_k_;
     int kmeans_iterations_;
 
+    double x_clipping_min;
+    double x_clipping_max;
+    double y_clipping_min;
+    double y_clipping_max;
+
+    vector<double> backup_weights;
+
     void updateLogProbParticle(Particle& particle);
     double getGaussianLogProb(double mu, double sigma, double x);
     double getLogProbObservation(Particle p, int objEnum, double visionDistance, double visionBearing);
     void normalizeWeights();
     Particle sampleParticle(double t, std::vector<double> cumulative_prob);
     void resampleParticles();
+    void switchToNormalProb();
+    void switchToLogSpaceProb();
     void printParticles();
     void addRandomParticles();
     bool landmarksSeen();
+    void clipParticles();
     double computeEntropy();
     Particle getKmeansPose();
 };

@@ -10,6 +10,10 @@ inline double loge(double val) {
   return log2(val) / log2(M_E);
 }
 
+inline double clip(double val, double mi, double mx) {
+  return max(min(val, mx), mi);
+}
+
 ParticleFilter::ParticleFilter(MemoryCache& cache, TextLogger*& tlogger) 
   : cache_(cache), tlogger_(tlogger), dirty_(true) {
 }
@@ -19,6 +23,7 @@ void ParticleFilter::init(Point2D loc, float orientation) {
   mean_.rotation = orientation;
   n_particles = 300;
   n_rand_particles = 1;
+  backup_weights.resize(n_particles);
   sigma_x = 10.0;
   sigma_y = 10.0;
   sigma_t = 0.1;
@@ -27,7 +32,19 @@ void ParticleFilter::init(Point2D loc, float orientation) {
   kmeans_k_ = 2;
   kmeans_iterations_ = 5;
 
+  x_clipping_min = 350.0;
+  x_clipping_max = 1000.0;
+  y_clipping_min = -700.0;
+  y_clipping_max = 700.0;
+
   reset();
+}
+
+void ParticleFilter::clipParticles() {
+  for(auto& p : particles()) {
+    p.x = clip(p.x, x_clipping_min, x_clipping_max);
+    p.y = clip(p.y, y_clipping_min, y_clipping_max);
+  }
 }
 
 double ParticleFilter::getGaussianLogProb(double mu, double sigma, double x) {
@@ -40,7 +57,7 @@ double ParticleFilter::getLogProbObservation(Particle p, int objEnum, double vis
   double y_pred = p.y + visionDistance * sin(angle);
   int objIdx = objEnum - WO_BEACON_BLUE_YELLOW + 1;
   Point2D loc = landmarkLocation[objIdx];
-  double sigma = 500.0;
+  double sigma = 50.0;
   double logprob = getGaussianLogProb(loc.x, sigma, x_pred) + getGaussianLogProb(loc.y, sigma, y_pred);
   return logprob;
 }
@@ -139,9 +156,22 @@ void ParticleFilter::addRandomParticles() {
     int idx = rand() % n_particles;
     auto& p = particles()[idx];
 
-    p.x = Random::inst().sampleU(-1500, 1500);
-    p.y = Random::inst().sampleU(-1000, 1000);
+    p.x = Random::inst().sampleU(350, 1000);
+    p.y = Random::inst().sampleU(-700, 700);
     p.t = Random::inst().sampleU(-M_PI, M_PI);
+  }
+}
+
+void ParticleFilter::switchToNormalProb() {
+  for(int i = 0; i < particles().size(); ++i) {
+    backup_weights[i] = particles()[i].w;
+    particles()[i].w = 1.0;
+  }
+}
+
+void ParticleFilter::switchToLogSpaceProb() {
+  for(int i = 0; i < particles().size(); ++i) {
+    particles()[i].w = backup_weights[i];
   }
 }
 
@@ -163,8 +193,10 @@ void ParticleFilter::processFrame() {
   bool landmarksSeenFlag = landmarksSeen();
 
   // add random particles only when you see beacons
-  if(landmarksSeenFlag)
+  if(landmarksSeenFlag) {
+    // cout << "========> Beacons seen\n";
     addRandomParticles();
+  }
 
   // Dynamics update
   for(auto& p : particles()) {
@@ -179,6 +211,10 @@ void ParticleFilter::processFrame() {
     if (p.t < 0.0)
       p.t += 2 * M_PI;
   }
+
+  switchToLogSpaceProb();
+  // clipping particles to X (min, max) Y (min, max) bounds 
+  clipParticles();
 
   for(auto& p : particles()) {
     updateLogProbParticle(p);
@@ -197,6 +233,8 @@ void ParticleFilter::processFrame() {
   {
     // printf("\n=============== Not resampling particles ===============\n");
   }
+
+  switchToNormalProb();
 }
 
 double euclid_dist(Particle a, Particle b) {
@@ -298,11 +336,13 @@ Pose2D& ParticleFilter::pose() {
       double sin_ = 0.0;
       double cos_ = 0.0;
 
+      int idx = 0;
       for(const auto& p : particles()) {
-        mean_.translation.x += exp(p.w) * p.x;
-        mean_.translation.y += exp(p.w) * p.y;
-        sin_ += exp(p.w) * sin(p.t);
-        cos_ += exp(p.w) * cos(p.t);
+        mean_.translation.x += exp(backup_weights[idx]) * p.x;
+        mean_.translation.y += exp(backup_weights[idx]) * p.y;
+        sin_ += exp(backup_weights[idx]) * sin(p.t);
+        cos_ += exp(backup_weights[idx]) * cos(p.t);
+        idx++;
       }
 
       // mean_.translation.x /= (double) n_particles;
@@ -331,12 +371,13 @@ void ParticleFilter::reset() {
   particles().resize(n_particles);
 
   for(auto& p : particles()) {
-    p.x = Random::inst().sampleU(-1500, 1500);
-    p.y = Random::inst().sampleU(-1000, 1000);
+    p.x = Random::inst().sampleU(350, 1000);
+    p.y = Random::inst().sampleU(-700, 700);
     p.t = Random::inst().sampleU(-M_PI, M_PI);
     p.w = loge((double) Random::inst().sampleU());
   }
   normalizeWeights();
+  switchToNormalProb();
 
 }
 
