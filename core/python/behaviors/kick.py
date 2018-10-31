@@ -21,6 +21,23 @@ list_of_beacons = [core.WO_BEACON_BLUE_YELLOW,
                    core.WO_BEACON_PINK_YELLOW,
                    core.WO_BEACON_YELLOW_PINK]
 
+class EWMA():
+    # Exponentially weighted moving average
+    def __init__(self, val, gamma):
+        self.init_val = val
+        self.val = val
+        self.gamma = gamma
+
+    def update(self, val):
+        self.val = self.gamma * self.val + (1-self.gamma) * val
+        return self.val
+
+    def get(self):
+        return self.val
+
+    def reset(self):
+        self.val = self.init_val
+
 def updateBeaconDict(beacon_dict):
     num_seen_beacons = 0
     for b in list_of_beacons:
@@ -76,6 +93,7 @@ class Playing(LoopingStateMachine):
                 self.last_seen = self.getTime()
             else:
                 if self.getTime() - self.last_seen > 2.0:
+                    commands.setWalkVelocity(0., 0., 0.)
                     self.postFailure()
 
     class HeadPos(Node):
@@ -94,7 +112,7 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.05, ball_x_threshold=130.0, ball_y_offset=-55.0, ball_y_threshold=7.0):
+        def __init__(self, goal_b_threshold=0.1, ball_x_threshold=135.0, ball_y_offset=-55.0, ball_y_threshold=7.0):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.ball_x_threshold = ball_x_threshold
@@ -140,7 +158,6 @@ class Playing(LoopingStateMachine):
 
     class Dribble(Node):
         def __init__(self, goal_b_threshold=0.20, goal_x_threshold=1200.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
-            super(Playing.Dribble, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.goal_x_threshold = goal_x_threshold
             self.ball_x_threshold = ball_x_threshold
@@ -155,11 +172,16 @@ class Playing(LoopingStateMachine):
             self.ball_fwd_compensation = 150
             self.ball_fwd_gap = 200
 
+            self.goal_b_ewma = EWMA(0., 0.90)
+            self.goal_d_ewma = EWMA(10000., 0.80)
+
             self.beacon_dict = {k:0 for k in list_of_beacons}
+            super(Playing.Dribble, self).__init__()
 
         def reset(self):
             super(Playing.Dribble, self).reset()
-            self.beacon_dict = {k:0 for k in list_of_beacons}            
+            self.beacon_dict = {k:0 for k in list_of_beacons}
+            self.goal_b_ewma.reset()
 
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
@@ -180,27 +202,30 @@ class Playing(LoopingStateMachine):
                     BY_cnt = self.beacon_dict[core.WO_BEACON_BLUE_YELLOW] + self.beacon_dict[core.WO_BEACON_YELLOW_BLUE]
                     BP_cnt = self.beacon_dict[core.WO_BEACON_PINK_BLUE] + self.beacon_dict[core.WO_BEACON_BLUE_PINK]
                     if BY_cnt > BP_cnt:
-                        goal_vision_bearing = 10.0 # self.goal_b_threshold + 1.0
+                        goal_vision_bearing = 1.0
                     else:
-                        goal_vision_bearing = -10.0
+                        goal_vision_bearing = -1.0
                     goal_fwd_dist = self.goal_x_threshold + 1.0
 
-                print('===> Dribble: visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(goal_fwd_dist, 
-                                                                                                                                               goal_vision_bearing, 
+                self.goal_b_ewma.update(goal_vision_bearing)
+                self.goal_d_ewma.update(goal_fwd_dist)
+
+                print('===> Dribble: visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(self.goal_d_ewma.get(), 
+                                                                                                                                               self.goal_b_ewma.get(), 
                                                                                                                                                ball_side_dist,
                                                                                                                                                ball_fwd_dist))
-                if abs(goal_vision_bearing) < self.goal_b_threshold and abs(ball_side_dist) < self.ball_y_threshold:
+                if abs(self.goal_b_ewma.get()) < self.goal_b_threshold and abs(ball_side_dist) < self.ball_y_threshold:
                     print('===> Dribble: Reached within bearing of the goal and distance of the ball!')
 
-                    if abs(goal_fwd_dist) < self.goal_x_threshold:
+                    if abs(self.goal_d_ewma.get()) < self.goal_x_threshold:
                         print('===> Dribble: Reached the goal!')
                         (vel_x, vel_y, vel_t) = (0., 0., 0.)
                         self.finish()
                     else:
                         (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist + self.ball_fwd_compensation, \
-                            ball_side_dist, goal_vision_bearing))
+                            ball_side_dist, self.goal_b_ewma.get()))
                 else:
-                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist - self.ball_fwd_gap, ball_side_dist, goal_vision_bearing))
+                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist - self.ball_fwd_gap, ball_side_dist, self.goal_b_ewma.get()))
 
                 commands.setWalkVelocity(vel_x, vel_y, vel_t)
             else:
@@ -216,6 +241,7 @@ class Playing(LoopingStateMachine):
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
             if ball.seen:
+                commands.setWalkVelocity(0., 0., 0.)
                 self.finish()
             else:
                 commands.setHeadPanTilt(pan=0., tilt=0., time=2.0)
@@ -322,23 +348,21 @@ class Playing(LoopingStateMachine):
         center = self.HeadPos(-22, 0)
         kick = self.Kick()
         lookatball = self.LookAtBall(delta_pan=12, duration=0.2)
-        leftSearch = self.SearchForBall(75, -22, 4.0)
-        rightSearch = self.SearchForBall(-75, -22, 4.0)
+        leftSearch = self.SearchForBall(75, -22, 2.0)
+        rightSearch = self.SearchForBall(-75, -22, 2.0)
         rotateBody = self.RotateBody()
 
         # self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
         
         self.add_transition(stand, C, center)
-        self.add_transition(center, T(4.0), leftSearch)
+        self.add_transition(center, T(2.0), leftSearch)
         self.add_transition(leftSearch, C, rightSearch)
         self.add_transition(leftSearch, F, rightSearch)
         self.add_transition(rightSearch, C, lookatball)
         self.add_transition(rightSearch, F, rotateBody)
         self.add_transition(rotateBody, C, lookatball)
-        self.add_transition(lookatball, C, walk_to_target)
+        self.add_transition(lookatball, C, dribble)
         self.add_transition(lookatball, F, center)
-        self.add_transition(walk_to_target, C, dribble)
-        self.add_transition(walk_to_target, F, center)
         self.add_transition(dribble, C, ptk)
         self.add_transition(dribble, F, center)
         self.add_transition(ptk, C, stand_at_ball)
