@@ -92,11 +92,12 @@ class ImageProcessor {
     void mergeBlobs(int idx1, int idx2); 
 	vector<RLE> getRLERow(int y, int width, int &start_idx); 
 	void mergeEncodings(vector<RLE> &prev_encoding, vector<RLE> &encoding); 
-	void calculateBlobs();
+	vector<Blob> calculateBlobs(int ignore_bottom=0);
     void detectBall();
     void findBall(int& imageX, int& imageY);
     void detectGoal();
     void findGoal(int& imageX, int& imageY);
+    void detectGoalLine();
   private:
     int getTeamColor();
     double getCurrentTime();

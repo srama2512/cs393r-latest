@@ -139,7 +139,7 @@ class Playing(LoopingStateMachine):
                     self.postFailure()
 
     class Dribble(Node):
-        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=1000.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
+        def __init__(self, goal_b_threshold=0.20, goal_x_threshold=1200.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
             super(Playing.Dribble, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.goal_x_threshold = goal_x_threshold

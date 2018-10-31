@@ -62,6 +62,8 @@ class PIDPosition(object):
         self.pid_y = PIDController()
         self.pid_t = PIDController()
         self.max_t_res = 1.0
+        self.max_x_res = float('inf')
+        self.max_y_res = float('inf')
 
     def set_const_x(self, cp, ci, cd):
         self.pid_x.set_constants(cp, ci, cd)
@@ -78,10 +80,18 @@ class PIDPosition(object):
         res_t = self.pid_t.update(curr[2], target[2])
 
         res_t = clip(res_t, -self.max_t_res, self.max_t_res)
+        res_x = clip(res_x, -self.max_x_res, self.max_x_res)
+        res_y = clip(res_y, -self.max_y_res, self.max_y_res)
 
-        print ("PIDController: x : ", "curr_error: ", self.pid_x.curr_error, "curr-prev: ", self.pid_x.curr_error-self.pid_x.prev_error, "cumulative_error: ", self.pid_x.cumulative_error)
-        print ("PIDController: y : ", "curr_error: ", self.pid_y.curr_error, "curr-prev: ", self.pid_y.curr_error-self.pid_y.prev_error, "cumulative_error: ", self.pid_y.cumulative_error)
-        print ("PIDController: t : ", "curr_error: ", self.pid_t.curr_error, "curr-prev: ", self.pid_t.curr_error-self.pid_t.prev_error, "cumulative_error: ", self.pid_t.cumulative_error)
+        # print ("PIDController: x : ", "curr_error: ", self.pid_x.curr_error, "curr-prev: ", self.pid_x.curr_error-self.pid_x.prev_error, "cumulative_error: ", self.pid_x.cumulative_error)
+        # print ("PIDController: y : ", "curr_error: ", self.pid_y.curr_error, "curr-prev: ", self.pid_y.curr_error-self.pid_y.prev_error, "cumulative_error: ", self.pid_y.cumulative_error)
+        # print ("PIDController: t : ", "curr_error: ", self.pid_t.curr_error, "curr-prev: ", self.pid_t.curr_error-self.pid_t.prev_error, "cumulative_error: ", self.pid_t.cumulative_error)
 
         return (res_x, res_y, res_t)
         
+    def has_converged(self, thresh_x, thresh_y, thresh_t):
+        if abs(self.pid_x.curr_error) < thresh_x and
+           abs(self.pid_y.curr_error) < thresh_y and
+           abs(self.pid_t.curr_error) < thresh_t:
+           return True
+        return False  

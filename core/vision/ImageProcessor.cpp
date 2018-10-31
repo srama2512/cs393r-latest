@@ -135,9 +135,9 @@ Blob makeBlob(RLE &r) {
     return b;
 }
 
-void ImageProcessor::calculateBlobs() {
+vector<Blob> ImageProcessor::calculateBlobs(int ignore_bottom) {
     // handle NULL case
-    int height = iparams_.height;
+    int height = iparams_.height - ignore_bottom;
     int width = iparams_.width;
     int ystep = 1 << iparams_.defaultVerticalStepScale;
     int loc_idx = 0;
@@ -158,12 +158,12 @@ void ImageProcessor::calculateBlobs() {
     }
 
     // setting the detected blobs in the vector
-    detected_blobs.clear();
-    detected_blobs.resize(parentRLE.size());
+    vector<Blob> detected_blobs_(parentRLE.size());
     int i = 0;
     for(auto it = parentRLE.begin(); it != parentRLE.end(); ++it, ++i) {
-        detected_blobs[i] = makeBlob(rle_ptr[*it]);
+        detected_blobs_[i] = makeBlob(rle_ptr[*it]);
     }
+    return detected_blobs_;
 }
 
 ImageProcessor::ImageProcessor(VisionBlocks& vblocks, const ImageParams& iparams, Camera::Type camera) :
@@ -286,12 +286,45 @@ void ImageProcessor::processFrame(){
   tlog(30, "Classifying Image: %i", camera_);
   if(!color_segmenter_->classifyImage(color_table_)) return;
   
-  calculateBlobs();
+  detected_blobs = calculateBlobs();
   detectBall();
-  if(camera_ == Camera::BOTTOM) return;
+  if(camera_ == Camera::BOTTOM) {
+    detectGoalLine();
+    return; 
+  }
 
   detectGoal();
   beacon_detector_->findBeacons(detected_blobs);
+}
+
+void ImageProcessor::detectGoalLine() {
+    WorldObject* gline = &vblocks_.world_object->objects_[WO_GOAL_D_LINE];
+
+    vector<Blob> truncated_blobs = calculateBlobs(30);
+    auto whiteBlobs = filterBlobs(truncated_blobs, c_WHITE, 1000);
+
+    if(whiteBlobs.size() == 0) {
+        gline->seen = false;
+    }
+    else {
+        gline->seen = true;
+
+        int imageX = whiteBlobs[0].avgX;
+        int imageY = whiteBlobs[0].avgY;
+
+        gline->imageCenterX = imageX; 
+        gline->imageCenterY = imageY;
+
+        Position p = cmatrix_.getWorldPosition(imageX, imageY);
+        gline->visionBearing = cmatrix_.bearing(p);
+        gline->visionElevation = cmatrix_.elevation(p);
+        gline->visionDistance = cmatrix_.groundDistance(p);
+        gline->fromTopCamera = (camera_ == Camera::TOP);
+        
+        // cout << "Goal Line imageX: " << imageX << " imageY: " << imageY << endl;
+        // cout << "Goal Line pan: " << gline->visionBearing << "   Goal Line tilt: " << gline->visionElevation << endl;
+        // cout << "Goal Line distance: " << gline->visionDistance << endl << endl;
+    }
 }
 
 void ImageProcessor::detectBall() {
@@ -363,7 +396,7 @@ void ImageProcessor::findGoal(int& imageX, int& imageY) {
         // cout << "Goal not detected" << endl;
         return;
     }
-    auto blueBlobs = filterBlobs(detected_blobs, c_BLUE, 2000);
+    auto blueBlobs = filterBlobs(detected_blobs, c_BLUE, 1000);
     sort(blueBlobs.begin(), blueBlobs.end(), BlobCompare);
     if(blueBlobs.size() > 0) {
         // cout << "Goal detected at: " << blueBlobs[0].avgX << "\t" << blueBlobs[0].yf << endl;
