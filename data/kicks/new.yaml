@@ -151,7 +151,7 @@ keyframes:
       RElbowYaw: 0.0902950983148785
       RElbowRoll: -2.90283031647681
   - name: Keyframe 7
-    frames: 80
+    frames: 100
     joints:
       HeadYaw: 0.437049972366194
       HeadPitch: -22.8494410059502
@@ -176,7 +176,7 @@ keyframes:
       RElbowYaw: 0.0902950983148785
       RElbowRoll: -2.46337595750712
   - name: stand
-    frames: 50
+    frames: 100
     joints:
       HeadYaw: 0.612831876036623
       HeadPitch: -22.4978723961327
