@@ -90,40 +90,55 @@ void ButtonModule::processCenterPresses() {
   int state = game_state_->state();
 
 #ifdef USE_LAB_BUTTONS
-  if ((center_.presses == 3) || (center_.presses == 4)) {
-    // always transition to finished
-    game_state_->setState(SET);
-    speech_->say("set");
-  } else if (center_.presses == 5) {
-    game_state_->setState(FINISHED);
-  } else if (center_.presses == 6) {
-    sayIP();
-  } else if (center_.presses == 7) {
-    game_state_->setState(TESTING);
-  } else if (center_.presses == 8 or center_.presses == 2) {
-    game_state_->isPenaltyKick = (not game_state_->isPenaltyKick);
-    std::cout << "Changed isPenaltyKick to ";
-    std::cout << (game_state_->isPenaltyKick ? "true" : "false") << std::endl;
-    speech_->say((game_state_->isPenaltyKick ? "Penalty" : "No Penalty"));
-  } else {
-    game_state_->lastStateChangeFromButton = true;
-    if (state==PENALISED) {
-      game_state_->setState(PLAYING);
-      game_state_->lastTimeLeftPenalized = frame_info_->seconds_since_start;
-    } else if (state == TESTING) {
+  if (center_.presses == 2 || center_.presses == 4) {
+    if (state == INITIAL)
+    {
+      game_state_->setState(center_.presses == 2 ? PLAYING : TESTING);
+    } 
+    else if (state == PLAYING || state == TESTING)
+    {
       game_state_->setState(FINISHED);
-    } else if (state == TEST_ODOMETRY) {
-      game_state_->setState(FINISHED);
-    } else if (state==READY) {
-      game_state_->setState(SET);
-    } else if (state==SET) {
-      game_state_->setState(PLAYING);
-    } else if (state==PLAYING) {
-      game_state_->setState(PENALISED);
-    } else if (state==FINISHED) {
+    }
+    else
+    {
       game_state_->setState(INITIAL);
     }
   }
+
+  // if ((center_.presses == 3) || (center_.presses == 4)) {
+  //   // always transition to finished
+  //   game_state_->setState(SET);
+  //   speech_->say("set");
+  // } else if (center_.presses == 5) {
+  //   game_state_->setState(FINISHED);
+  // } else if (center_.presses == 6) {
+  //   sayIP();
+  // } else if (center_.presses == 7) {
+  //   game_state_->setState(TESTING);
+  // } else if (center_.presses == 8 or center_.presses == 2) {
+  //   game_state_->isPenaltyKick = (not game_state_->isPenaltyKick);
+  //   std::cout << "Changed isPenaltyKick to ";
+  //   std::cout << (game_state_->isPenaltyKick ? "true" : "false") << std::endl;
+  //   speech_->say((game_state_->isPenaltyKick ? "Penalty" : "No Penalty"));
+  // } else {
+  //   game_state_->lastStateChangeFromButton = true;
+  //   if (state==PENALISED) {
+  //     game_state_->setState(PLAYING);
+  //     game_state_->lastTimeLeftPenalized = frame_info_->seconds_since_start;
+  //   } else if (state == TESTING) {
+  //     game_state_->setState(FINISHED);
+  //   } else if (state == TEST_ODOMETRY) {
+  //     game_state_->setState(FINISHED);
+  //   } else if (state==READY) {
+  //     game_state_->setState(SET);
+  //   } else if (state==SET) {
+  //     game_state_->setState(PLAYING);
+  //   } else if (state==PLAYING) {
+  //     game_state_->setState(PENALISED);
+  //   } else if (state==FINISHED) {
+  //     game_state_->setState(INITIAL);
+  //   }
+  // }
 #else
   if ((center_.presses == 3) || (center_.presses == 4)) {
     // always transition to finished

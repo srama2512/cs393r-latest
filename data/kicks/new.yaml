@@ -62,10 +62,10 @@ keyframes:
       LAnklePitch: -20.305386856212
       LAnkleRoll: -14.5241902526373
       RHipYawPitch: 4.66066098584671
-      RHipRoll: -21.7947488368757
-      RHipPitch: 12.3903307860523
-      RKneePitch: 36.2137985754503
-      RAnklePitch: -43.0645430091308
+      RHipRoll: -30.7947488368757
+      RHipPitch: -2.3903307860523
+      RKneePitch: 46.2137985754503
+      RAnklePitch: -53.0645430091308
       RAnkleRoll: 25.9304572925359
       LShoulderPitch: -90.6139656874073
       LShoulderRoll: 3.0738036070228
@@ -76,7 +76,7 @@ keyframes:
       RElbowYaw: 0.00240422631249996
       RElbowRoll: -1.32078096380797
   - name: Keyframe 3
-    frames: 20
+    frames: 10
     joints:
       HeadYaw: -0.44185858549063
       HeadPitch: -23.1131119137848
@@ -87,10 +87,35 @@ keyframes:
       LAnklePitch: -35.9501259600684
       LAnkleRoll: -14.2605167834819
       RHipYawPitch: -1.31597251076609
-      RHipRoll: -24.9588475422134
-      RHipPitch: -55.7257633589959
-      RKneePitch: 71.5462568856843
-      RAnklePitch: -27.46838817785357
+      RHipRoll: -30.9588475422134
+      RHipPitch: -75.7257633589959
+      RKneePitch: 91.5462568856843
+      RAnklePitch: -12.46838817785357
+      RAnkleRoll: 26.1062509889544
+      LShoulderPitch: -91.8444515529004
+      LShoulderRoll: 2.81013099164099
+      LElbowYaw: 0.700722747830561
+      LElbowRoll: -3.60116249816439
+      RShoulderPitch: -91.2339965826288
+      RShoulderRoll: 5.6274746628448
+      RElbowYaw: -0.173377503726722
+      RElbowRoll: -2.1997033421253
+  - name: Keyframe 3(2)
+    frames: 5
+    joints:
+      HeadYaw: -0.44185858549063
+      HeadPitch: -23.1131119137848
+      LHipYawPitch: -1.31597251076609
+      LHipRoll: 23.1131119137848
+      LHipPitch: -21.5844530100074
+      LKneePitch: 43.3282190396071
+      LAnklePitch: -35.9501259600684
+      LAnkleRoll: -14.2605167834819
+      RHipYawPitch: -1.31597251076609
+      RHipRoll: -30.9588475422134
+      RHipPitch: -75.7257633589959
+      RKneePitch: 91.5462568856843
+      RAnklePitch: -12.46838817785357
       RAnkleRoll: 26.1062509889544
       LShoulderPitch: -91.8444515529004
       LShoulderRoll: 2.81013099164099

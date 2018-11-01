@@ -65,8 +65,8 @@ class PIDPosition(object):
         self.max_x_res = float('inf')
         self.max_y_res = float('inf')
 
-    def set_const_x(self, cp, ci, cd):
-        self.pid_x.set_constants(cp, ci, cd)
+    def set_const_x(self, cp, ci, cd, max_cumul_error=float('inf')):
+        self.pid_x.set_constants(cp, ci, cd, max_cumul_error)
 
     def set_const_y(self, cp, ci, cd, max_cumul_error=float('inf')):
         self.pid_y.set_constants(cp, ci, cd, max_cumul_error)
@@ -83,9 +83,9 @@ class PIDPosition(object):
         res_x = clip(res_x, -self.max_x_res, self.max_x_res)
         res_y = clip(res_y, -self.max_y_res, self.max_y_res)
 
-        print ("PIDController: x : ", "curr_error: ", self.pid_x.curr_error, "curr-prev: ", self.pid_x.curr_error-self.pid_x.prev_error, "cumulative_error: ", self.pid_x.cumulative_error)
-        print ("PIDController: y : ", "curr_error: ", self.pid_y.curr_error, "curr-prev: ", self.pid_y.curr_error-self.pid_y.prev_error, "cumulative_error: ", self.pid_y.cumulative_error)
-        print ("PIDController: t : ", "curr_error: ", self.pid_t.curr_error, "curr-prev: ", self.pid_t.curr_error-self.pid_t.prev_error, "cumulative_error: ", self.pid_t.cumulative_error)
+        # print ("PIDController: x : ", "curr_error: ", self.pid_x.curr_error, "curr-prev: ", self.pid_x.curr_error-self.pid_x.prev_error, "cumulative_error: ", self.pid_x.cumulative_error)
+        # print ("PIDController: y : ", "curr_error: ", self.pid_y.curr_error, "curr-prev: ", self.pid_y.curr_error-self.pid_y.prev_error, "cumulative_error: ", self.pid_y.cumulative_error)
+        # print ("PIDController: t : ", "curr_error: ", self.pid_t.curr_error, "curr-prev: ", self.pid_t.curr_error-self.pid_t.prev_error, "cumulative_error: ", self.pid_t.cumulative_error)
 
         return (res_x, res_y, res_t)
         

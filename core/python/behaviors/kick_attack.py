@@ -117,9 +117,10 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.1, ball_x_threshold=135.0, ball_y_offset=-55.0, ball_y_threshold=7.0):
+        def __init__(self, goal_b_threshold=0.1, goal_b_offset=-0.3, ball_x_threshold=130.0, ball_y_offset=-75.0, ball_y_threshold=7.0):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
+            self.goal_b_offset = goal_b_offset
             self.ball_x_threshold = ball_x_threshold
             self.ball_y_offset = ball_y_offset
             self.ball_y_threshold = ball_y_threshold
@@ -127,9 +128,10 @@ class Playing(LoopingStateMachine):
 
             self.forward_compensation = 100.0
             self.pid_position = PIDPosition()
-            self.pid_position.set_const_x(1.2e-3, 1e-5, 0., 1000.0)
+            self.pid_position.set_const_x(1.5e-3, 1e-5, 0., 1000.0)
             self.pid_position.set_const_y(3.0e-3, 1e-4, 0., 1000.0)
             self.pid_position.set_const_t(1.2, 0., 0.)
+            self.pid_position.max_t_res = 0.2
 
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
@@ -144,7 +146,7 @@ class Playing(LoopingStateMachine):
                                                                                                                                                ball_side_dist,
                                                                                                                                                ball_fwd_dist))
 
-                if abs(goal.visionBearing) < self.goal_b_threshold and abs(ball_side_dist - self.ball_y_offset) < self.ball_y_threshold and abs(ball_fwd_dist) < self.ball_x_threshold:
+                if abs(goal.visionBearing - self.goal_b_offset) < self.goal_b_threshold and abs(ball_side_dist - self.ball_y_offset) < self.ball_y_threshold and abs(ball_fwd_dist) < self.ball_x_threshold:
                     print('===> PositionToKick: Reached within bearing of the goal and distance of the ball!')
                     print('===> PositionToKick: FINAL - visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(goal.visionDistance, 
                                                                                                                                                goal.visionBearing, 
@@ -153,7 +155,7 @@ class Playing(LoopingStateMachine):
                     commands.setWalkVelocity(0.0, 0.0, 0.0)
                     self.finish()
                 else:
-                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist, ball_side_dist - self.ball_y_offset, goal.visionBearing))
+                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist, ball_side_dist - self.ball_y_offset, goal.visionBearing - self.goal_b_offset))
                     print ("===> PositionToKick: vel_x : ", vel_x, "vel_y :", vel_y, "vel_t : ", vel_t)
                     commands.setWalkVelocity(vel_x, vel_y, vel_t)
             else:
@@ -359,26 +361,26 @@ class Playing(LoopingStateMachine):
 
         # self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
         
-        # self.add_transition(stand, C, center)
-        # self.add_transition(center, T(2.0), leftSearch)
-        # self.add_transition(leftSearch, C, rightSearch)
-        # self.add_transition(leftSearch, F, rightSearch)
-        # self.add_transition(rightSearch, C, lookatball)
-        # self.add_transition(rightSearch, F, rotateBody)
-        # self.add_transition(rotateBody, C, lookatball)
-        # self.add_transition(lookatball, C, walk_to_target)
-        # self.add_transition(lookatball, F, center)
-        # self.add_transition(walk_to_target, C, dribble)
-        # self.add_transition(walk_to_target, F, center)
-        # self.add_transition(dribble, C, ptk)
-        # self.add_transition(dribble, F, center)
-        # self.add_transition(ptk, C, stand_at_ball)
-        # self.add_transition(ptk, F, dribble)
-        # self.add_transition(stand_at_ball, C, kick)
-        # self.add_transition(kick, C, dribble)
+        self.add_transition(stand, C, center)
+        self.add_transition(center, T(2.0), leftSearch)
+        self.add_transition(leftSearch, C, rightSearch)
+        self.add_transition(leftSearch, F, rightSearch)
+        self.add_transition(rightSearch, C, lookatball)
+        self.add_transition(rightSearch, F, rotateBody)
+        self.add_transition(rotateBody, C, lookatball)
+        self.add_transition(lookatball, C, walk_to_target)
+        self.add_transition(lookatball, F, center)
+        self.add_transition(walk_to_target, C, dribble)
+        self.add_transition(walk_to_target, F, center)
+        self.add_transition(dribble, C, ptk)
+        self.add_transition(dribble, F, center)
+        self.add_transition(ptk, C, stand_at_ball)
+        self.add_transition(ptk, F, dribble)
+        self.add_transition(stand_at_ball, C, kick)
+        self.add_transition(kick, C, dribble)
 
         #self.trans(self.PositionToKick(), C)
-        self.trans(self.Stand(), C, self.Kick(), C, self.Stand(), C, pose.Sit(), C, self.Off())
+        # self.trans(self.Stand(), C, self.Kick(), C, self.Stand(), C, pose.Sit(), C, self.Off())
         # self.trans(self.Stand(), C, self.Kick(), C, self.Unstiffen(), C)
 
         # self.trans(self.Stand(), C, self.Unstiffen(), C)
