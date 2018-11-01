@@ -51,7 +51,7 @@ keyframes:
       RElbowYaw: -0.261268362180447
       RElbowRoll: -0.881326604838278
   - name: Keyframe 2
-    frames: 5
+    frames: 10
     joints:
       HeadYaw: -0.44185858549063
       HeadPitch: -23.1131119137848
@@ -76,7 +76,7 @@ keyframes:
       RElbowYaw: 0.00240422631249996
       RElbowRoll: -1.32078096380797
   - name: Keyframe 3
-    frames: 10
+    frames: 20
     joints:
       HeadYaw: -0.44185858549063
       HeadPitch: -23.1131119137848
@@ -101,7 +101,7 @@ keyframes:
       RElbowYaw: -0.173377503726722
       RElbowRoll: -2.1997033421253
   - name: Keyframe 1(4)
-    frames: 20
+    frames: 10
     joints:
       HeadYaw: -0.44185858549063
       HeadPitch: -23.1131119137848
