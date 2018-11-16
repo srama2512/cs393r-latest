@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 
+#include <common/Field.h>
 #include <math/Pose2D.h>
 #include <math/Geometry.h>
 #include <common/WorldObject.h>

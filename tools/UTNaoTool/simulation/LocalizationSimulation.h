@@ -5,11 +5,12 @@
 #include <common/RobotInfo.h>
 #include <common/RobotPositions.h>
 #include <VisionCore.h>
-
+#include <common/Field.h>
 #include "CommunicationGenerator.h"
 #include "ObservationGenerator.h"
 #include "Simulation.h"
 #include "SimulationPath.h"
+#include <cmath>
 
 struct AgentError {
   float dist;
@@ -73,6 +74,7 @@ class LocalizationSimulation : public Simulation {
     std::vector<std::string> getTextDebug(int player = 0);
     AgentError getError(LocSimAgent::Type type);
     void printError();
+    Point2D beaconPos;
     void flip();
     void outputBadPaths(float maxDistError, float maxRotError);
     const SimulationPath* path() const { return &path_; }
@@ -88,10 +90,11 @@ class LocalizationSimulation : public Simulation {
     SimulationPath path_, origPath_;
     float maxDistError_, maxRotError_;
     bool outputBadPaths_;
+    float direction_;
 
     void init(std::vector<LocSimAgent::Type> types);
     void startCore(LocSimAgent& agent);
-
+    void setTargetDir();
     void stepPose();
     void stepError();
     void generateObservations();

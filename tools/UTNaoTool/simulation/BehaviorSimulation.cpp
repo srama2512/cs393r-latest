@@ -20,9 +20,13 @@
 #include <stdlib.h>
 #include <InterpreterModule.h>
 
-#define SKIP_TO_PLAYING false
+#define SKIP_TO_PLAYING true
 #define OUR_TEAM 1
 #define THEIR_TEAM -1
+#define player_ 5
+
+#define getObject(obj, idx, cache) \
+  auto& obj = cache.world_object->objects_[idx];
 
 using std::vector;
 using std::string;
@@ -82,6 +86,9 @@ BehaviorSimulation::BehaviorSimulation(bool lmode) : lmode_(lmode) {
       if(itrole != config_.roles.end())
         sims_[i]->setRole(itrole->second);
       playerCaches.push_back(sims_[i]->getMemoryCache());
+      // sims_[i]->cache_.world_object->objects_[i].loc.x = -HALF_FIELD_X/2;
+      // sims_[i]->cache_.world_object->objects_[i].loc.y = 0.0;
+      // sims_[i]->cache_.world_object->objects_[i].orientation = M_PI/2.0;
     }
   }
 
@@ -94,41 +101,82 @@ BehaviorSimulation::BehaviorSimulation(bool lmode) : lmode_(lmode) {
 
   gtcache.world_object->objects_[WO_BALL].loc = Point2D(0,0);
 
+  // getObject(self, player_, gtcache);
+  // self.loc = Point2D(-HALF_FIELD_X/2, 0);
+  // self.orientation = M_PI/2.0;
+
   for (int i = WO_PLAYERS_FIRST; i <= WO_PLAYERS_LAST; i++){
     int teamsign;
     int self;
     getTeamSignAndSelf(i,teamsign,self);
-   
-    if(SKIP_TO_PLAYING) {
-      if(teamsign == OUR_TEAM)
-        setObjectFromPose(i,teamsign,&RobotPositions::ourKickoffPosesDesired[self]);
-      else
-        setObjectFromPose(i,teamsign,&RobotPositions::theirKickoffPosesDesired[self]);
-    }
-    else setObjectFromPose(i,teamsign,&RobotPositions::startingSidelinePoses[self]);
+    
+    // if(SKIP_TO_PLAYING) {
+    //   if(teamsign == OUR_TEAM)
+    //     setObjectFromPose(i,teamsign,&RobotPositions::ourKickoffPosesDesired[self]);
+    //   else
+    //     setObjectFromPose(i,teamsign,&RobotPositions::theirKickoffPosesDesired[self]);
+    // }
+    // else setObjectFromPose(i,teamsign,&RobotPositions::startingSidelinePoses[self]);
 
-    // special locations for penalty kick
-    if (simPenaltyKick) {
-      if (i == WO_TEAM_LAST){
-        gtcache.world_object->objects_[i].loc.x = PENALTY_CROSS_X - 1000;
-        gtcache.world_object->objects_[i].loc.y = 0;
-        gtcache.world_object->objects_[i].orientation = 0;
-        gtcache.world_object->objects_[WO_BALL].loc = Point2D(PENALTY_CROSS_X,0);
-      } else {
-        gtcache.world_object->objects_[i].loc.x = FIELD_X/2.0 - 50;
-        gtcache.world_object->objects_[i].loc.y = 0;
-        gtcache.world_object->objects_[i].orientation = M_PI;
-      }
-    }
+    // // special locations for penalty kick
+    // if (simPenaltyKick) {
+    //   if (i == WO_TEAM_LAST){
+    //     gtcache.world_object->objects_[i].loc.x = PENALTY_CROSS_X - 1000;
+    //     gtcache.world_object->objects_[i].loc.y = 0;
+    //     gtcache.world_object->objects_[i].orientation = 0;
+    //     gtcache.world_object->objects_[WO_BALL].loc = Point2D(PENALTY_CROSS_X,0);
+    //   } else {
+    //     gtcache.world_object->objects_[i].loc.x = FIELD_X/2.0 - 50;
+    //     gtcache.world_object->objects_[i].loc.y = 0;
+    //     gtcache.world_object->objects_[i].orientation = M_PI;
+    //   }
+    // }
 
     // set way off field if not active
     if (sims_[i] == nullptr) {
       gtcache.world_object->objects_[i].loc.x = 10000;
       gtcache.world_object->objects_[i].loc.y = 10000;
     }
+    else
+    {
+      std::cout << "Active player: " << i << std::endl;
+      gtcache.world_object->objects_[i].loc.x = -650;
+      gtcache.world_object->objects_[i].loc.y = 0;
+      gtcache.world_object->objects_[i].orientation = M_PI/2.0;
+
+      std::cout << "Poses: loc -- " << gtcache.world_object->objects_[i].loc << " --  orientation " << gtcache.world_object->objects_[i].orientation << std::endl;
+    }
+    
+    // gtcache.world_object->objects_[i].loc.x = -HALF_FIELD_X/2;
+    // gtcache.world_object->objects_[i].loc.y =  0;
+    // gtcache.world_object->objects_[i].orientation =  M_PI/2.0;
 
   }
+
+ 
+
   applyConfig(gtcache, playerCaches);
+  for (int i = WO_PLAYERS_FIRST; i <= WO_PLAYERS_LAST; i++){
+    int teamsign;
+    int self;
+    getTeamSignAndSelf(i,teamsign,self);
+
+    // set way off field if not active
+    if (sims_[i] == nullptr) {
+      gtcache.world_object->objects_[i].loc.x = 10000;
+      gtcache.world_object->objects_[i].loc.y = 10000;
+    }
+    else
+    {
+      std::cout << "Active player: " << i << std::endl;
+      gtcache.world_object->objects_[i].loc.x = -HALF_FIELD_X/2;
+      gtcache.world_object->objects_[i].loc.y = 0;
+      gtcache.world_object->objects_[i].orientation = M_PI/2.0;
+
+      std::cout << "Poses: loc -- " << gtcache.world_object->objects_[i].loc << " --  orientation " << gtcache.world_object->objects_[i].orientation << std::endl;
+    }
+
+  }
   for (int i = WO_PLAYERS_FIRST; i <= WO_ROBOTS_LAST; i++){
     if(sims_[i] != nullptr)
       sims_[i]->initLocalization();
@@ -652,9 +700,9 @@ void BehaviorSimulation::simulationStep(){
       robot->orientation = srobot.orientation;
     } else {
       //stepPlayerBumpBall(i,ballLoc,ballVel,robot); // let the physics simulator do this
-      stepPlayerPenaltyBox(i,robot);
-      stepPlayerCollisions(i,robot);
-      stepPlayerComm(i);
+      // stepPlayerPenaltyBox(i,robot);
+      // stepPlayerCollisions(i,robot);
+      // stepPlayerComm(i);
     }
   } // simulate step for this robot
 
@@ -848,6 +896,12 @@ void BehaviorSimulation::teleportBall(Point2D pos){
   WorldObject* ball = &(gtcache.world_object->objects_[WO_BALL]);
   ball->loc = pos;
 }
+
+// void BehaviorSimulation::teleportPlayer(Point2D position, float orientation, int) {
+//   getObject(self, player_, gtcache_);
+//   self.loc = position;
+//   self.orientation = orientation;
+// }
 
 void BehaviorSimulation::changeSimulationKickoff(){
   gtcache.game_state->ourKickOff = !gtcache.game_state->ourKickOff;

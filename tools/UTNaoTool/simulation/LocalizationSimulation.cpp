@@ -47,6 +47,7 @@ void LocalizationSimulation::init(vector<LocSimAgent::Type> types) {
   gtcache_ = MemoryCache::create(team_, player_);
   og_.setInfoBlocks(gtcache_.frame_info, gtcache_.joint);
   og_.setPlayer(player_, team_);
+  beaconPos = Point2D(-HALF_FIELD_X/2, HALF_FIELD_Y);
   for(auto type : types) {
     agents_[type] = LocSimAgent(type);
   }
@@ -55,7 +56,9 @@ void LocalizationSimulation::init(vector<LocSimAgent::Type> types) {
     startCore(kvp.second);
   }
   ballmove_ = 0;
+  direction_ = 1.0;
   outputBadPaths_ = false;
+  teleportPlayer(Point2D(-HALF_FIELD_X/2, 0), M_PI/2.0);
 }
 
 MemoryCache LocalizationSimulation::getGtMemoryCache(int) const {
@@ -193,46 +196,60 @@ void LocalizationSimulation::stepError() {
   }
 }
 
+void LocalizationSimulation::setTargetDir() {
+  getObject(self, player_, gtcache_);
+  if(std::abs(self.loc.y - beaconPos.y) < 500){
+    direction_ = -1.0;
+  }
+  else if(std::abs(self.loc.y - beaconPos.y) > 1500) {
+    direction_ = 1.0;
+  }
+}
 void LocalizationSimulation::stepPose() {
   if(path_.empty()) return;
   getObject(self, player_, gtcache_);
+  setTargetDir();
 
   self.orientation = normalizeAngle(self.orientation);
 
-  auto cpoint = self.loc;
-  auto target = path_.currentPoint();
-  auto diff = (target - cpoint);
-  auto dist = diff.getMagnitude();
+  auto cpoint = self.loc; 
+
+  // auto target = path_.currentPoint();
+  // auto diff = (target - cpoint);
+  // auto dist = diff.getMagnitude();
   Pose2D disp;
 
   // Turn if we're not facing the target point
-  bool moveForward = true;
-  if(dist > .0001) {
-    float tbearing = cpoint.getBearingTo(target, self.orientation);
-    if(abs(tbearing) < RADS_PER_FRAME) {
-      disp.rotation = tbearing;
-      self.orientation += disp.rotation;
-    } else {
-      float direction = tbearing > 0 ? 1 : -1;
-      disp.rotation = direction * RADS_PER_FRAME;
-      self.orientation += disp.rotation;
-      moveForward = false;
-    }
-  }
+
+  // bool moveForward = true;
+  // if(dist > .0001) {
+  //   float tbearing = cpoint.getBearingTo(target, self.orientation);
+  //   if(abs(tbearing) < RADS_PER_FRAME) {
+  //     disp.rotation = tbearing;
+  //     self.orientation += disp.rotation;
+  //   } else {
+  //     float direction = tbearing > 0 ? 1 : -1;
+  //     disp.rotation = direction * RADS_PER_FRAME;
+  //     self.orientation += disp.rotation;
+  //     moveForward = false;
+  //   }
+  // }
   
-  if(moveForward) {
-    auto toffset = target - cpoint;
-    if(toffset.getMagnitude() < DISTANCE_PER_FRAME) {
-      self.loc = target;
-      disp.translation.x = (target - self.loc).getMagnitude();
-      path_.pop();
-    } else {
-      auto direction = diff / diff.getMagnitude();
-      self.loc += direction * DISTANCE_PER_FRAME;
-      disp.translation.x = DISTANCE_PER_FRAME;
-    }
-  }
-  disp.rotation *= pow(2.0, rand_.sampleU(-2.0,2.0));
+  self.loc.y += direction_ * DISTANCE_PER_FRAME;
+  disp.translation.y = direction_ * DISTANCE_PER_FRAME;
+  // if(moveForward) {
+  //   auto toffset = target - cpoint;
+  //   if(toffset.getMagnitude() < DISTANCE_PER_FRAME) {
+  //     self.loc = target;
+  //     disp.translation.x = (target - self.loc).getMagnitude();
+  //     path_.pop();
+  //   } else {
+  //     auto direction = diff / diff.getMagnitude();
+  //     self.loc += direction * DISTANCE_PER_FRAME;
+  //     disp.translation.x = DISTANCE_PER_FRAME;
+  //   }
+  // }
+  // disp.rotation *= pow(2.0, rand_.sampleU(-2.0,2.0));
   disp.translation *= rand_.sampleU(.5,2.0);
   for(auto kvp : agents_) {
     auto& agent = kvp.second;

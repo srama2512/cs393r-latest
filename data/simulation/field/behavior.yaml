@@ -1,5 +1,5 @@
 ---
-game_state: SET
+game_state: PLAYING
 blue_goals: 0
 red_goals: 0
 roles:
@@ -7,21 +7,16 @@ states:
 objects:
   gtconfig:
     placements_:
-      0:
-        x: 0
-        y: 0
-        orientation: 0
-        height: 0
       5:
-        x: -750
+        x: -650
         y: 0
-        orientation: 0
+        orientation: 1.57079
         height: 0
   bconfig:
     placements_:
       5:
-        x: -750
+        x: -650
         y: 0
-        orientation: 0
+        orientation: 1.57079
         height: 0
 ...
