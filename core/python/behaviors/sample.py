@@ -10,6 +10,8 @@ import pose
 import core
 import commands
 import cfgstiff
+import math
+import random
 from task import Task
 from state_machine import Node, C, T, StateMachine
 
@@ -20,6 +22,9 @@ class Ready(Task):
         if self.getTime() > 5.0:
             memory.speech.say("ready to play")
             self.finish()
+
+def getGTVelocities(velX, velY, velT):
+    return velX*240.0, velY*120.0, velT*math.radians(130.0)
 
 
 class Playing(StateMachine):
@@ -40,17 +45,33 @@ class Playing(StateMachine):
     class WalkToBeacon(Node):
         def __init__(self):
             super(Playing.WalkToBeacon, self).__init__()
-            self.dir = 1.0
+            self.lastActionTime = self.getTime()
+            self.velx = random.uniform(-1, 1)
 
         def run(self):
             beacon = mem_objects.world_objects[core.WO_BEACON_BLUE_PINK]
             if beacon.seen:
                 print('beacon positions: ', beacon.visionDistance, beacon.visionBearing)
                 if beacon.visionDistance < 500:
-                    self.dir = -1.0
+                    self.velx = random.uniform(-1, 0)
+                    self.lastActionTime = self.getTime()
                 elif beacon.visionDistance > 1500:
-                    self.dir = 1.0
-                commands.setWalkVelocity(self.dir * 0.5, 0.0, 0.0)
+                    self.velx = random.uniform(0, 1)
+                    self.lastActionTime = self.getTime()
+                
+                if self.getTime() - self.lastActionTime > 3.0:
+                    self.velx = random.uniform(-1, 1)
+                    self.lastActionTime = self.getTime()
+                commands.setWalkVelocity(self.velx, 0.0, 0.0)
+
+                control = self.velx
+                obsHeight = beacon.radius 
+                gtVelx = getGTVelocities(self.velx, 0, 0)[0]
+                gtDistance = beacon.height # comment this line for running on robot 
+
+                print("Control: {:.3f}, gtVelx: {:.3f}, obsHeight: {:.3f}, gtDistance: {:.3f}".format(self.velx, gtVelx, obsHeight, gtDistance))
+
+
 
     class Off(Node):
         def run(self):

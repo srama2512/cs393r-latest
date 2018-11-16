@@ -140,6 +140,14 @@ void ObservationGenerator::generateBeaconObservations() {
         obsBeacon.visionDistance = distance + randNoise * VISION_ERROR_FACTOR * 0.2*distance;// up to 15% distance error
         obsBeacon.visionBearing = bearing + randNoise * VISION_ERROR_FACTOR * 10.0*DEG_T_RAD;// up to 5 deg bearing error
         obsBeacon.visionConfidence = 1.0;
+        
+        // simulated beacon pixel height
+        float thetaTop = 2.0f * atanf(300.0f / 2.0f / distance);
+        float thetaBot = 2.0f * atanf(100.0f / 2.0f / distance);
+        obsBeacon.radius = (thetaTop - thetaBot) / FOVy * iparams_.height;
+        // ground truth distances
+        obsBeacon.height = distance;
+        std::cout << "thetaTop : "<< thetaTop << " thetaBot: " << thetaBot << " pixel height : " << obsBeacon.radius << " gtdistance : " << obsBeacon.height << std::endl;
       }
     }
   }
@@ -392,6 +400,8 @@ void ObservationGenerator::fillObservationObjects() {
       to.relVel = from.relVel;
       to.absVel = from.absVel;
       to.sdOrientation = from.sdOrientation;
+      to.radius = from.radius;
+      to.height = from.height;
     }
   }
 }
