@@ -33,6 +33,10 @@ class IncrementalRegression(object):
 		mtdy = self.VySumVec - (self.V1SumVec * self.ySum) / self.N
 		self.beta = np.dot(np.linalg.inv(mtdm), mtdy)
 		self.alpha = (self.ySum - np.dot(self.V1SumVec, self.beta)) / self.N 
+
+	def update_and_compute(self, *args):
+		self.update(*args)
+		self.computeParams()
 		
 	def predict(self, x):
 		""" x is n x (d+1) matrix """
