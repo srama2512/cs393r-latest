@@ -74,13 +74,38 @@ class Line2D:
 
 			return False
 
-class PathPlanner:
+class PathPlanner(object):
 	def __init__(self):
 		self._obstacles = []
 		self._target = None
 
-	def update(self):
+	def update(self, obstacles, target):
 		pass
+
+class PotentialPathPlanner(PathPlanner):
+	class Potential:
+		def __init__(self, magnitude, direction):
+			self.magnitude = magnitude
+			self.direction = direction
+
+	def __init__(self):
+		super(PotentialPathPlanner, self).__init__()
+		self._obstacles = []
+		self._target = None
+		self._stepsize = 0.1
+		self._path = None
+
+	def update(self, obstacles, target):
+		potential_x = 0.
+		potential_y = 0.
+		potential_target_x, potential_target_y = self.compute_potential(target)
+		pontential_x += potential_target_x
+		pontential_y += potential_target_y
+		for obs in obstacles:
+			potential_obs_x, potential_obs_y = self.compute_potential(obs.pos)
+			pontential_x -= potential_obs_x
+			pontential_y -= potential_obs_y
+		
 
 class GeometricPathPlanner(PathPlanner):
 

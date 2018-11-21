@@ -14,7 +14,7 @@ class PathTester:
 
 		self._robot_loc = Pose2D(self._get_random_pos(), randu(0, 2 * math.pi))
 		self._obstacle_radius = 30
-		self._obstacles = [Obstacle(*self._get_random_pos().loc(), self._obstacle_radius) for i in range(num_obstacles)]
+		self._obstacles = [Obstacle(*self._get_random_pos().loc(), r=self._obstacle_radius) for i in range(num_obstacles)]
 		self._target = self._get_random_pos()
 		self._validate_obstacles()
 
