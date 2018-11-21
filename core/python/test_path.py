@@ -130,8 +130,9 @@ class PathTester:
 p = PathTester()
 p._robot_loc = Pose2D(Point2D(494, 357), 2.8743314216643725)
 p._obstacles = [Obstacle(288, 183, 30), Obstacle(311, 297, 30), Obstacle(430, 305, 30)]
+# p._obstacles = []
 p._target = Point2D(196, 151)
-planner = GeometricPathPlanner()
+planner = PotentialPathPlanner()
 
 while True:
 	p.draw()

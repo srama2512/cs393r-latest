@@ -74,6 +74,12 @@ class Line2D:
 
 			return False
 
+def sqr_dist_point2D(pt1, pt2):
+	return ((pt1.x - pt2.x) ** 2 + (pt1.y - pt2.y) ** 2)
+
+def dist_point2D(pt1, pt2):
+	return sqr_dist_point2D(pt1, pt2) ** 0.5
+
 class PathPlanner(object):
 	def __init__(self):
 		self._obstacles = []
@@ -83,29 +89,65 @@ class PathPlanner(object):
 		pass
 
 class PotentialPathPlanner(PathPlanner):
-	class Potential:
-		def __init__(self, magnitude, direction):
-			self.magnitude = magnitude
-			self.direction = direction
-
 	def __init__(self):
 		super(PotentialPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._stepsize = 0.1
+		self._stepsize = 0.01
 		self._path = None
+		self._goal_eps = 10.
+		self._k_attr = 1.0
+		self._k_rep = 100000.0
+		self.q_star_mult = 1.
+
+	def distance_to_target(self, curr_pos, target):
+		return dist_point2D(curr_pos, target)
+
+	def compute_target_potential_grad(self, curr_pos, target):
+		potential = dist_point2D(curr_pos, target)
+		theta = math.atan2(target.y - curr_pos.y, target.x - curr_pos.x)
+		return potential * math.cos(theta), potential * math.sin(theta)
+
+	def compute_obstacle_potential_grad(self, curr_pos, obstacle):
+		dist = dist_point2D(curr_pos, obstacle.pos)
+		q_star = self.q_star_mult * obstacle.r
+		if (dist > q_star):
+			return 0., 0.
+		potential =  (1. / (q_star) - 1. / dist)
+		theta = math.atan2(obstacle.pos.y - curr_pos.y, obstacle.pos.x - curr_pos.x)
+		return potential * math.cos(theta), potential * math.sin(theta)
+
+	def get_new_position(self, curr_pos, potential_x, potential_y):
+		new_x = curr_pos.x + self._stepsize * potential_x
+		new_y = curr_pos.y + self._stepsize * potential_y
+		return Point2D(new_x, new_y)
+
+	def compute_potential_gradient(self, curr_pos, target, obstacles):
+		grad_x = 0.
+		grad_y = 0.
+		grad_target_x, grad_target_y = self.compute_target_potential_grad(curr_pos, target)
+		grad_x += self._k_attr * grad_target_x
+		grad_y += self._k_attr * grad_target_y
+		for obs in obstacles:
+			grad_obs_x, grad_obs_y = self.compute_obstacle_potential_grad(curr_pos, obs)
+			grad_x += self._k_rep * grad_obs_x
+			grad_y += self._k_rep * grad_obs_y
+		return grad_x, grad_y
 
 	def update(self, obstacles, target):
-		potential_x = 0.
-		potential_y = 0.
-		potential_target_x, potential_target_y = self.compute_potential(target)
-		pontential_x += potential_target_x
-		pontential_y += potential_target_y
-		for obs in obstacles:
-			potential_obs_x, potential_obs_y = self.compute_potential(obs.pos)
-			pontential_x -= potential_obs_x
-			pontential_y -= potential_obs_y
-		
+		self._path = []
+		curr_pos = Point2D(0., 0.)
+		dist = self.distance_to_target(curr_pos, target)
+		n_obstacles = len(obstacles)
+		while True:
+			dist = self.distance_to_target(curr_pos, target)
+			if (dist < self._goal_eps):
+				break
+			grad_x, grad_y = self.compute_potential_gradient(curr_pos, target, obstacles)
+			new_pos = self.get_new_position(curr_pos, grad_x, grad_y)
+			self._path.append((curr_pos, new_pos, 'line'))
+			curr_pos = new_pos
+		return self._path
 
 class GeometricPathPlanner(PathPlanner):
 
