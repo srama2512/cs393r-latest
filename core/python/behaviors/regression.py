@@ -49,15 +49,18 @@ class IncrementalRegression(object):
 
 if __name__ == '__main__':
 	
-	x = np.linspace(0.0, 2*math.pi, num=100)
-	y = np.cos(x) + np.random.randn(*x.shape)*0.01
+	# x = np.linspace(0.0, 2*math.pi, num=100)
+	# y = np.cos(x) + np.random.randn(*x.shape)*0.01
+	x = np.linspace(5.0, 40.0, 100)
+	y = np.log(x)
 
-	dim = 5
+	dim = 3
 	gamma = 1.0
 	regressor = IncrementalRegression(gamma, dim)
 
 	for xi, yi in zip(x,y):
 		inputData = IncrementalRegression.getPolyStack(np.array([xi]), dim)
+		print('x: {}, y: {}'.format(inputData[0], yi))
 		regressor.update(inputData[0], yi)
 
 	regressor.computeParams()

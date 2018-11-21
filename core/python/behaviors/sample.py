@@ -72,8 +72,6 @@ class Playing(StateMachine):
                 print("Control: {:.3f}, gtVelx: {:.3f}, obsHeight: {:.3f}, gtDistance: {:.3f}".format(self.velx, gtVelx, obsHeight, gtDistance))
 
 
-
-
     class Off(Node):
         def run(self):
             commands.setStiffness(cfgstiff.Zero)
