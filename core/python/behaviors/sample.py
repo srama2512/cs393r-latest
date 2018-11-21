@@ -1,18 +1,21 @@
 """Sample behavior."""
 
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 from __future__ import absolute_import
 
-import memory
-import mem_objects
+import os
 import pose
 import core
-import commands
-import cfgstiff
 import math
 import random
+import memory
+import commands
+import cfgstiff
+import mem_objects
+
 from task import Task
+from behaviors.asami import ASAMI
 from state_machine import Node, C, T, StateMachine
 
 
@@ -45,32 +48,50 @@ class Playing(StateMachine):
     class WalkToBeacon(Node):
         def __init__(self):
             super(Playing.WalkToBeacon, self).__init__()
+            self.startTime = self.getTime()
             self.lastActionTime = self.getTime()
+            self.lastAction = None
             self.velx = random.uniform(-1, 1)
+            self.asami = ASAMI(dimA=4, dimS=3)
+            self.logger = open('logger.txt', 'w')
+            self.logger.write('==== Logging ASAMI ====\n')
+            self.logger.write('t, Ws_t, Wa_t, gtDistance\n')
+            self.currentPhase = 1
 
         def run(self):
-            beacon = mem_objects.world_objects[core.WO_BEACON_BLUE_PINK]
-            if beacon.seen:
-                print('beacon positions: ', beacon.visionDistance, beacon.visionBearing)
-                if beacon.visionDistance < 500:
-                    self.velx = random.uniform(-1, 0)
-                    self.lastActionTime = self.getTime()
-                elif beacon.visionDistance > 1500:
-                    self.velx = random.uniform(0, 1)
-                    self.lastActionTime = self.getTime()
-                
-                if self.getTime() - self.lastActionTime > 3.0:
-                    self.velx = random.uniform(-1, 1)
-                    self.lastActionTime = self.getTime()
-                commands.setWalkVelocity(self.velx, 0.0, 0.0)
 
-                control = self.velx
+            beacon = mem_objects.world_objects[core.WO_BEACON_BLUE_PINK]
+            obsHeight = None
+            gtDistance = None
+            boundFlag = 0
+            if beacon.seen:
+                # print('beacon positions: ', beacon.visionDistance, beacon.visionBearing)
+                if beacon.visionDistance < 1200:
+                    boundFlag = -1
+                elif beacon.visionDistance > 2500:
+                    boundFlag = 1
+
                 obsHeight = beacon.radius 
-                gtVelx = getGTVelocities(self.velx, 0, 0)[0]
                 gtDistance = beacon.height # comment this line for running on robot 
 
-                print("Control: {:.3f}, gtVelx: {:.3f}, obsHeight: {:.3f}, gtDistance: {:.3f}".format(self.velx, gtVelx, obsHeight, gtDistance))
-
+            control = self.velx
+            gtVelx = getGTVelocities(self.velx, 0, 0)[0]
+            print("Control: {:.3f}, gtVelx: {:.3f}, obsHeight: {}, gtDistance: {}".format(self.velx, gtVelx, obsHeight, gtDistance))
+            if self.lastAction is not None:
+                self.asami.update(self.lastAction, self.getTime()-self.lastActionTime, obsHeight)
+            
+            if beacon.seen:
+                self.logger.write('{:.3f},{:.3f},{:.3f},{:.3f}\n'.format(self.getTime()-self.startTime, self.asami.Ws_t, self.asami.Wa_t, gtDistance))
+            
+            if self.getTime() - self.lastActionTime > 3.0 or boundFlag != 0:
+                if boundFlag == -1:
+                    self.currentPhase = -1
+                elif boundFlag == 1:
+                    self.currentPhase = 1
+                self.velx = random.uniform(0, 1) * self.currentPhase
+                self.lastAction = self.velx
+                self.lastActionTime = self.getTime()
+                commands.setWalkVelocity(self.velx, 0.0, 0.0)
 
     class Off(Node):
         def run(self):

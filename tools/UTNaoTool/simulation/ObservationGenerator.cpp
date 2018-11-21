@@ -147,7 +147,7 @@ void ObservationGenerator::generateBeaconObservations() {
         obsBeacon.radius = (thetaTop - thetaBot) / FOVy * iparams_.height;
         // ground truth distances
         obsBeacon.height = distance;
-        std::cout << "thetaTop : "<< thetaTop << " thetaBot: " << thetaBot << " pixel height : " << obsBeacon.radius << " gtdistance : " << obsBeacon.height << std::endl;
+        // std::cout << "thetaTop : "<< thetaTop << " thetaBot: " << thetaBot << " pixel height : " << obsBeacon.radius << " gtdistance : " << obsBeacon.height << std::endl;
       }
     }
   }

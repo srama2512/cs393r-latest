@@ -94,7 +94,7 @@ BehaviorSimulation::BehaviorSimulation(bool lmode) : lmode_(lmode) {
 
   switch(config_.game_state) {
     case PLAYING:
-      simTimer = 5 * 60.0f; break;
+      simTimer = 2.5 * 60.0f; break;
     default:
       simTimer = 5.0f; break;
   }
