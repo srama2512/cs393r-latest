@@ -1,6 +1,7 @@
 #include <vision/ImageProcessor.h>
 #include <vision/Classifier.h>
 #include <vision/BeaconDetector.h>
+#include <vision/ObstacleDetector.h>
 #include <vision/Logging.h>
 #include <iostream>
 #include <cmath>
@@ -295,6 +296,7 @@ void ImageProcessor::processFrame(){
 
   detectGoal();
   beacon_detector_->findBeacons(detected_blobs);
+  obstacle_detector_->findObstacles();
 }
 
 void ImageProcessor::detectGoalLine() {
