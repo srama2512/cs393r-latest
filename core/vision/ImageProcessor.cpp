@@ -1,7 +1,7 @@
 #include <vision/ImageProcessor.h>
 #include <vision/Classifier.h>
 #include <vision/BeaconDetector.h>
-#include <vision/ObstacleDetector.h>
+// #include <vision/ObstacleDetector.h>
 #include <vision/Logging.h>
 #include <iostream>
 #include <cmath>
@@ -288,7 +288,8 @@ void ImageProcessor::processFrame(){
   if(!color_segmenter_->classifyImage(color_table_)) return;
   
   detected_blobs = calculateBlobs();
-  detectBall();
+  // detectBall();
+  detectObstacles();
   if(camera_ == Camera::BOTTOM) {
     detectGoalLine();
     return; 
@@ -296,7 +297,31 @@ void ImageProcessor::processFrame(){
 
   detectGoal();
   beacon_detector_->findBeacons(detected_blobs);
-  obstacle_detector_->findObstacles();
+  // obstacle_detector_->findObstacles();
+}
+
+void ImageProcessor::detectObstacles() {
+    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 50);
+    sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
+
+    for(int i = 0; i < min(5, (int)orangeBlobs.size()); ++i) {
+        WorldObject* obs = &vblocks_.world_object->objects_[WO_OPPONENT1 + i];
+
+        obs->imageCenterX = orangeBlobs[i].avgX;
+        obs->imageCenterY = orangeBlobs[i].avgY;
+        obs->radius = 250.0;
+
+        Position p = cmatrix_.getWorldPosition(obs->imageCenterX, obs->imageCenterY);
+        obs->visionBearing = cmatrix_.bearing(p);
+        obs->visionElevation = cmatrix_.elevation(p);
+        obs->visionDistance = cmatrix_.groundDistance(p);
+        obs->seen = true;
+
+        if(camera_ == Camera::BOTTOM)
+            obs->fromTopCamera = false;
+        else
+            obs->fromTopCamera = true;
+    }
 }
 
 void ImageProcessor::detectGoalLine() {

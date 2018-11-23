@@ -5,6 +5,7 @@ from random import randint as randi
 from random import uniform as randu
 import numpy as np
 import pdb
+import argparse
 
 class PathTester:
 	def __init__(self, num_obstacles=2, max_x=600, max_y=450, border_size=50):
@@ -126,14 +127,22 @@ class PathTester:
 
 		return ret
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--planner', default='geo', type=str, help='planner type to use')
+args = parser.parse_args()
 
 p = PathTester()
 p._robot_loc = Pose2D(Point2D(494, 357), 2.8743314216643725)
 p._obstacles = [Obstacle(288, 183, 30), Obstacle(311, 297, 30), Obstacle(430, 305, 30)]
 # p._obstacles = []
 p._target = Point2D(196, 151)
-# planner = PotentialPathPlanner()
-planner = GeometricPathPlanner()
+
+if args.planner == 'apm':
+	planner = PotentialPathPlanner()
+elif args.planner == 'geo':
+	planner = GeometricPathPlanner()
+else:
+	raise NotImplementedError('unknown planner type')
 
 while True:
 	p.draw()

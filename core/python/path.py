@@ -98,7 +98,7 @@ class PotentialPathPlanner(PathPlanner):
 		self._goal_eps = 10.
 		self._k_attr = 1.0
 		self._k_rep = 100000.0
-		self.q_star_mult = 1.
+		self.q_star_mult = 2.
 
 	def distance_to_target(self, curr_pos, target):
 		return dist_point2D(curr_pos, target)
