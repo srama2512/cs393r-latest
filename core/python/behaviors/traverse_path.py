@@ -101,7 +101,7 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class TraversePath(Node):
-        def __init__(self, planner_type='geo', delta_pan=6):
+        def __init__(self, planner_type='geo', delta_pan=6, dist_target_thresh=500.0):
             super(Playing.TraversePath, self).__init__()
             if planner_type == 'geo':
                 self.planner = GeometricPathPlanner()
@@ -109,8 +109,8 @@ class Playing(LoopingStateMachine):
                 self.planner = PotentialPathPlanner()
             else:
                 raise NotImplementedError('Unsupported path planner type')
-            self.obstacles_ = []
-            self.target_ = None
+            self._obstacles = []
+            self._target = None
             self.midX = 160
             self.midY = 120
             self.thresh = 20
@@ -122,11 +122,12 @@ class Playing(LoopingStateMachine):
             self.pid_position.set_const_x(1.2e-3, 0., 0.)
             self.pid_position.set_const_y(4.5e-3, 1e-4, 0., 1000.0)
             self.pid_position.set_const_t(1.2, 0., 0.)
+            self.min_obstacle_vel = 0.2
 
             self.last_seen = self.getTime()
 
-            # self.ewma_pd = self.EWMA(0., 0.95)
-            # self.ewma_pb = self.EWMA(0., 0.95)
+            self.ewma_dist_target = EWMA(10000.0, 0.95)
+            self.dist_target_thresh = dist_target_thresh
 
         # TODO add reset()
 
@@ -141,15 +142,14 @@ class Playing(LoopingStateMachine):
                 self._target = Point2D(*self._get_egocentric(target.visionDistance, target.visionBearing))
                 self.targetX = target.imageCenterX
                 self.targetY = target.imageCenterY
-            else:
-                self._target = None
-                self.targetX = None
-                self.targetY = None
+                self.ewma_dist_target.update(target.visionDistance)
 
-            self._obstacles = [Obstacle(*self._get_egocentric(obs.visionDistance, obs.visionBearing), r=200.0) for obs in opponents]
+            self._obstacles = [Obstacle(*self._get_egocentric(obs.visionDistance, obs.visionBearing), r=250.0) for obs in opponents]
             
             if self._target is not None and len([o for o in self._obstacles if o._is_inside(self._target)]) > 0:
                 print ('Warning: target inside obstacle')
+
+            return target.seen
 
         def _print_path(self, path):
             if path is None:
@@ -157,7 +157,7 @@ class Playing(LoopingStateMachine):
                 return
 
             print('Obstacles:')
-            print('\n'.join([obs.pos.__str__() for obs in self._obstacles]))
+            print('\n'.join([obs.pos.__str__() for obs in self.planner._obstacles]))
             print('')
             print('Target: ' + self._target.__str__())
             print('Path:')
@@ -169,8 +169,8 @@ class Playing(LoopingStateMachine):
             return max(min(x, xmax), xmin)
 
         def run(self):
-            self._get_field()
-            if self._target is not None:
+
+            if self._get_field():
                 pan = core.joint_values[core.HeadYaw]
                 if abs(self.targetX - self.midX) > self.thresh:
                    if self.targetX > self.midX:
@@ -183,7 +183,7 @@ class Playing(LoopingStateMachine):
                 self.last_seen = self.getTime()
             else:
                 pan = core.joint_values[core.HeadYaw]
-                path = None
+                path = self.planner.update(self._obstacles, self._target)
 
                 if self.getTime() - self.last_seen > 2.0:
                     commands.setWalkVelocity(0.0, 0.0, 0.0)
@@ -201,8 +201,16 @@ class Playing(LoopingStateMachine):
 
                 (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (d, 0, theta))
 
+                if len(path) > 1:
+                    vel_x = max(self.min_obstacle_vel, vel_x)
+
+            if self.ewma_dist_target.get() < self.dist_target_thresh:
+                vel_x, vel_y, vel_t = 0.0, 0.0, 0.0
+                self.finish()
+
+            print ('Distance to Target: ', self.ewma_dist_target.get())
             commands.setWalkVelocity(vel_x, vel_y, vel_t)
-            commands.setHeadPanTilt(pan=pan, tilt=-20., time=0.1)
+            commands.setHeadPanTilt(pan=pan, tilt=-10., time=0.1)
 
 
     def setup(self):

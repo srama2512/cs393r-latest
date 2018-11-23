@@ -64,29 +64,9 @@ class PathTester:
 		cv2.imshow('dst_rt', img)
 		cv2.setMouseCallback('dst_rt', self.click_callback)
 
-	def _merge_obstacles(self):
-		m_obstacles = []
-		for obs in self._obstacles:
-			match = False
-			for cluster in m_obstacles:
-				if len([o for o in cluster if obs._is_overlapping(o)]) > 0:
-					cluster.append(obs)
-					match = True
-					break
-			if not match:
-				m_obstacles.append([obs])
-
-		self._obstacles = []
-		for cluster in m_obstacles:
-			obs = cluster[0]
-			for o in cluster[1:]:
-				obs._merge_together(o)
-			self._obstacles.append(obs)
-
 	def _validate_obstacles(self):
-		self._merge_obstacles()
-		new_obstacles = [obs for obs in self._obstacles if not (obs._is_inside(self._robot_loc.pos) or obs._is_inside(self._target))]
-		self._obstacles = new_obstacles
+		self._obstacles = merge_obstacles(self._obstacles)
+		# new_obstacles = [obs for obs in self._obstacles if not (obs._is_inside(self._robot_loc.pos) or obs._is_inside(self._target))]
 
 	def click_callback(self, event, x, y, flags, param):
 
@@ -121,7 +101,7 @@ class PathTester:
 		ret = ''
 		ret += 'RPos: ' + self._robot_loc.__str__() + '\n'
 		ret += 'Obstacles:\n'
-		ret += '\n'.join([obs.pos.__str__() for obs in self._obstacles])
+		ret += '\n'.join([obs.pos.__str__() + ' r: ' + str(obs.r) for obs in self._obstacles])
 		ret += '\n'
 		ret += 'Target: ' + self._target.__str__() + '\n'
 
@@ -132,10 +112,15 @@ parser.add_argument('--planner', default='geo', type=str, help='planner type to 
 args = parser.parse_args()
 
 p = PathTester()
-p._robot_loc = Pose2D(Point2D(494, 357), 2.8743314216643725)
-p._obstacles = [Obstacle(288, 183, 30), Obstacle(311, 297, 30), Obstacle(430, 305, 30)]
-# p._obstacles = []
-p._target = Point2D(196, 151)
+# p._robot_loc = Pose2D(Point2D(494, 357), 2.8743314216643725)
+# p._obstacles = [Obstacle(288, 183, 30), Obstacle(311, 297, 30), Obstacle(430, 305, 30)]
+# # p._obstacles = []
+# p._target = Point2D(196, 151)
+
+p._robot_loc = Pose2D(Point2D(0, 100), 0)
+# p._obstacles = [Obstacle(172, 114, 30), Obstacle(135, 113, 30), Obstacle(164, 90, 30), Obstacle(207, 134, 30)]
+p._target = Point2D(269, 111)
+p._obstacles = [Obstacle(0, 0, 30), Obstacle(50, 0, 30), Obstacle(25, 60, 30)]
 
 if args.planner == 'apm':
 	planner = PotentialPathPlanner()
@@ -147,6 +132,7 @@ else:
 while True:
 	p.draw()
 	print(p)
+	# TODO: change this
 	path = planner.update(*p.get_keypoints_egocentric())
 	print([(pt1.__str__(), pt2.__str__(), etype) for pt1, pt2, etype in path])
 	p.draw_path(path)

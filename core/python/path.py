@@ -1,6 +1,8 @@
 import pdb
 import math
 import heapq
+import numpy as np
+from circle_utils import minidisk
 
 class Point2D:
 	def __init__(self, x, y):
@@ -43,7 +45,50 @@ class Obstacle:
 	def _merge_together(self, obs):
 		dist = math.sqrt((self.pos.x - obs.pos.x) ** 2 + (self.pos.y - obs.pos.y) ** 2)
 		self.pos = Point2D((self.pos.x + obs.pos.x) / 2.0, (self.pos.y + obs.pos.y) / 2.0)
-		self.r = max(self.r, obs.r) + dist / 2.0
+		self.r = (self.r + obs.r + dist) / 2.0
+
+def merge_n_obs_together(obstacles):
+	centers = np.array([[obs.pos.x, obs.pos.y] for obs in obstacles])
+	m_center, r = minidisk(centers)
+	max_r = max([obs.r for obs in obstacles])
+
+	return Obstacle(m_center[0], m_center[1], r + max_r)
+
+def merge_obstacle_helper(tent_obs, clusters, max_cid):
+	if len(tent_obs) == 1:
+		return clusters
+
+	ids = tent_obs.keys()
+	for i in range(len(ids)):
+		for j in range(i + 1, len(ids)):
+			cid1, cid2 = ids[i], ids[j]
+			if tent_obs[cid1]._is_overlapping(tent_obs[cid2]):
+				all_cluster = clusters[cid1] + clusters[cid2]
+				del clusters[cid1]
+				del tent_obs[cid1]
+				del clusters[cid2]
+				del tent_obs[cid2]
+				tent_obs[max_cid] = merge_n_obs_together(all_cluster)
+				clusters[max_cid] = all_cluster
+				max_cid += 1
+
+				return merge_obstacle_helper(tent_obs, clusters, max_cid)
+
+	return clusters
+
+def merge_obstacles(obstacles):
+
+	clusters = {k: [obs] for k, obs in enumerate(obstacles)}
+	tent_obs = {k: obs for k, obs in enumerate(obstacles)}
+	max_cid = len(obstacles)
+
+	clusters = merge_obstacle_helper(tent_obs, clusters, max_cid)
+
+	ret_obstacles = []
+	for cid in clusters.keys():
+		ret_obstacles.append(merge_n_obs_together(clusters[cid]))
+
+	return ret_obstacles
 
 class Line2D:
 	def __init__(self, p1, p2):
@@ -135,6 +180,8 @@ class PotentialPathPlanner(PathPlanner):
 		return grad_x, grad_y
 
 	def update(self, obstacles, target):
+		if target is None:
+			return None
 		self._path = []
 		curr_pos = Point2D(0., 0.)
 		dist = self.distance_to_target(curr_pos, target)
@@ -269,14 +316,16 @@ class GeometricPathPlanner(PathPlanner):
 			self._update_visibility_graph(o4, tgt, io4, i2, ignore_obs=ignore_obs + [intersecting_obs[0][0]])
 
 	def update(self, obstacles, target):
-		self._obstacles = obstacles
+		if target is None:
+			return None
+		self._obstacles = merge_obstacles(obstacles)
 		self._target = target
 		self._vis_graph = self.VisibilityGraph()
 		try:
 			self._update_visibility_graph(Point2D(0, 0), self._target)
 			self._path = self._vis_graph.dijkstras()
 		except:
-			print ('Warning: Cannot calculate tangent from a point within the circle')
+			print ('\n\n\n Warning: Cannot calculate tangent from a point within the circle \n\n\n')
 
 		return self._path
 
