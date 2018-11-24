@@ -112,20 +112,21 @@ parser.add_argument('--planner', default='geo', type=str, help='planner type to 
 args = parser.parse_args()
 
 p = PathTester()
-# p._robot_loc = Pose2D(Point2D(494, 357), 2.8743314216643725)
-# p._obstacles = [Obstacle(288, 183, 30), Obstacle(311, 297, 30), Obstacle(430, 305, 30)]
-# # p._obstacles = []
-# p._target = Point2D(196, 151)
+p._robot_loc = Pose2D(Point2D(494, 357), 2.8743314216643725)
+p._obstacles = [Obstacle(288, 183, 30), Obstacle(311, 297, 30), Obstacle(430, 305, 30)]
+p._target = Point2D(196, 151)
 
-p._robot_loc = Pose2D(Point2D(0, 100), 0)
+# p._robot_loc = Pose2D(Point2D(0, 100), 0)
 # p._obstacles = [Obstacle(172, 114, 30), Obstacle(135, 113, 30), Obstacle(164, 90, 30), Obstacle(207, 134, 30)]
-p._target = Point2D(269, 111)
-p._obstacles = [Obstacle(0, 0, 30), Obstacle(50, 0, 30), Obstacle(25, 60, 30)]
+# p._target = Point2D(269, 111)
+# p._obstacles = [Obstacle(0, 0, 30), Obstacle(50, 0, 30), Obstacle(25, 60, 30)]
 
 if args.planner == 'apm':
 	planner = PotentialPathPlanner()
 elif args.planner == 'geo':
 	planner = GeometricPathPlanner()
+elif args.planner == 'rrt':
+	planner = RRTPlanner()
 else:
 	raise NotImplementedError('unknown planner type')
 

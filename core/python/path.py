@@ -2,6 +2,7 @@ import pdb
 import math
 import heapq
 import numpy as np
+from numpy.random import uniform as randu
 from circle_utils import minidisk
 
 class Point2D:
@@ -14,6 +15,16 @@ class Point2D:
 
 	def dist(self, pt):
 		return math.sqrt((self.x - pt.x) ** 2 + (self.y - pt.y) ** 2)
+
+	def pt_in_dir(self, pt, d):
+		ux = pt.x - self.x
+		uy = pt.y - self.y
+		mag = math.sqrt(ux ** 2 + uy ** 2)
+		assert mag != 0.0
+		ux /= mag
+		uy /= mag
+
+		return Point2D(self.x + d * ux, self.y + d * uy)
 
 	def __str__(self):
 		return '(' + str(self.x) + ', ' + str(self.y) + ')'
@@ -138,12 +149,13 @@ class PotentialPathPlanner(PathPlanner):
 		super(PotentialPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._stepsize = 0.01
+		self._stepsize = 0.1
 		self._path = None
 		self._goal_eps = 10.
 		self._k_attr = 1.0
-		self._k_rep = 100000.0
-		self.q_star_mult = 2.
+		self._k_rep = 10000.0
+		self.q_star_mult = 5.
+		self.max_path_len = 20
 
 	def distance_to_target(self, curr_pos, target):
 		return dist_point2D(curr_pos, target)
@@ -187,6 +199,8 @@ class PotentialPathPlanner(PathPlanner):
 		dist = self.distance_to_target(curr_pos, target)
 		n_obstacles = len(obstacles)
 		while True:
+			if len(self._path) > self.max_path_len:
+				break
 			dist = self.distance_to_target(curr_pos, target)
 			if (dist < self._goal_eps):
 				break
@@ -329,3 +343,144 @@ class GeometricPathPlanner(PathPlanner):
 
 		return self._path
 
+class RRTPlanner(PathPlanner):
+
+	class RRT:
+		def __init__(self):
+			self._nodes = {0: Point2D(0., 0.)}
+			self._tree = {0: []}
+			self._max_id = 1
+
+		def _get_closest_node(self, pt):
+			nearest_neighs = [k for k, v in sorted(self._nodes.iteritems(), key=lambda kv: kv[1].dist(pt))]
+			return nearest_neighs[0]
+
+		def _add_node(self, pt, nearest):
+			key = self._max_id
+			self._max_id += 1
+			self._nodes[key] = pt
+			self._tree[key] = []
+			self._tree[nearest].append(key)
+			self._tree[key].append(nearest)
+
+			return key
+
+		def _dijkstras(self, src, target):
+			min_dist = [float('inf') if i != src else 0.0 for i in range(self._max_id)]
+			visited = [False for i in range(self._max_id)]
+			back_pointers = [None for i in range(self._max_id)]
+			pr_queue = []
+			heapq.heappush(pr_queue, (0., src))
+
+			while len(pr_queue) > 0:
+				cost, idx = heapq.heappop(pr_queue)
+
+				if visited[idx]:
+					continue
+				visited[idx] = True
+
+				for neigh in self._tree[idx]:
+					ecost = self._nodes[neigh].dist(self._nodes[idx])
+					if min_dist[neigh] > cost + ecost:
+						min_dist[neigh] = cost + ecost
+						back_pointers[neigh] = (idx, (self._nodes[idx], self._nodes[neigh], 'line'))
+						heapq.heappush(pr_queue, (cost + ecost, neigh))
+
+			path = []
+			idx = target
+			while idx != 0:
+				path.append(back_pointers[idx][1])
+				idx = back_pointers[idx][0]
+
+			path.reverse()
+			return path
+
+	def __init__(self):
+		super(RRTPlanner, self).__init__()
+		self._obstacles = []
+		self._target = None
+		self._path = None
+		self._delta_q = 20.
+		self._tree = self.RRT()
+
+		self._xmin, self._xmax = -1000.0, 3000.0
+		self._ymin, self._ymax = -2000.0, 2000.0
+
+		self._max_tree_size = 200
+		self._target_tolerance = 20.
+
+	def _get_search_bounds(self):
+		points = [Point2D(0., 0.), self._target] + [obs.pos for obs in self._obstacles]
+		self._xmin = min([pt.x for pt in points])
+		self._xmax = max([pt.x for pt in points])
+		self._ymin = min([pt.y for pt in points])
+		self._ymax = max([pt.y for pt in points])
+
+	def _add_node_to_tree_multiple(self, q_rand):
+		q_near_key = self._tree._get_closest_node(q_rand)
+		q_near = self._tree._nodes[q_near_key]
+		obs_interrupt = False
+
+		while q_near.dist(q_rand) > self._delta_q:
+			q_new = q_near.pt_in_dir(q_rand, self._delta_q)
+			line = Line2D(q_near, q_new)
+			overlap = [obs for obs in self._obstacles if line._intersect_with_circle(obs)]
+			if len(overlap) > 0:
+				obs_interrupt = True
+				break
+			# pdb.set_trace()
+			q_near_key = self._tree._add_node(q_new, q_near_key)
+			q_near = self._tree._nodes[q_near_key]
+
+		if obs_interrupt:
+			return
+
+		line = Line2D(q_near, q_rand)
+		overlap = [obs for obs in self._obstacles if line._intersect_with_circle(obs)]
+		if len(overlap) > 0:
+			return
+		self._tree._add_node(q_rand, q_near_key)
+
+	def _add_node_to_tree_single(self, q_rand):
+		q_near_key = self._tree._get_closest_node(q_rand)
+		q_near = self._tree._nodes[q_near_key]
+		if q_near.dist(q_rand) < self._delta_q:
+			q_new = q_rand
+		else:
+			q_new = q_near.pt_in_dir(q_rand, self._delta_q)
+
+		line = Line2D(q_near, q_new)
+		overlap = [obs for obs in self._obstacles if line._intersect_with_circle(obs)]
+		if len(overlap) > 0:
+			return
+		self._tree._add_node(q_new, q_near_key)
+
+	def _get_random_point(self):
+		return Point2D(randu(self._xmin, self._xmax), randu(self._ymin, self._ymax))
+
+	def _plan(self):
+		self._tree = self.RRT()
+		self._get_search_bounds()
+
+		while self._tree._max_id < self._max_tree_size:
+			t_near_key = self._tree._get_closest_node(self._target)
+			t_near = self._tree._nodes[t_near_key]
+			if t_near.dist(self._target) < self._target_tolerance:
+				break
+
+			q_rand = self._get_random_point()
+			self._add_node_to_tree_single(q_rand)
+
+		src = 0
+		target = self._tree._get_closest_node(self._target)
+
+		return self._tree._dijkstras(src, target)
+
+	def update(self, obstacles, target):
+		if target is None:
+			return None
+		self._obstacles = obstacles
+		self._target = target
+		self._path = self._plan()
+
+		return self._path
