@@ -1,10 +1,10 @@
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
 import pdb
 import math
-from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import LinearRegression
 
 class IncrementalRegression(object):
 	"""docstring for IncrementalRegression"""
@@ -44,8 +44,8 @@ class IncrementalRegression(object):
 
 	@staticmethod
 	def getPolyStack(x, d):
-		data = [x**i for i in range(1, d+1)]
-		return np.stack(data, axis=1)
+		data = [x[:, np.newaxis]**i for i in range(1, d+1)]
+		return np.concatenate(data, axis=1)
 
 if __name__ == '__main__':
 	
@@ -67,10 +67,10 @@ if __name__ == '__main__':
 	yhat = regressor.predict(IncrementalRegression.getPolyStack(x, dim))
 
 	sample_weights = [gamma**(100-i) for i in range(1,101)]
-	lr = LinearRegression().fit(IncrementalRegression.getPolyStack(x, dim), y, sample_weights)
+	# lr = LinearRegression().fit(IncrementalRegression.getPolyStack(x, dim), y, sample_weights)
 
-	plt.plot(x, y, linestyle='dashed')
-	plt.plot(x, yhat)
-	plt.plot(x, lr.predict(IncrementalRegression.getPolyStack(x, dim)))
-	plt.savefig('plot.png')
+	# plt.plot(x, y, linestyle='dashed')
+	# plt.plot(x, yhat)
+	# plt.plot(x, lr.predict(IncrementalRegression.getPolyStack(x, dim)))
+	# plt.savefig('plot.png')
 

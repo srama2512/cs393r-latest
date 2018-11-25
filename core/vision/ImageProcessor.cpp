@@ -293,7 +293,7 @@ void ImageProcessor::processFrame(){
     return; 
   }
 
-  detectGoal();
+  // detectGoal();
   beacon_detector_->findBeacons(detected_blobs);
 }
 

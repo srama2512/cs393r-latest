@@ -1,8 +1,8 @@
 from regression import IncrementalRegression
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
 
 class ASAMI(object):
 	"""docstring for ASAMI"""
@@ -67,6 +67,6 @@ if __name__ == '__main__':
 		asami.update(1.0, delta_t, obs_t[i])
 	asami.St.computeParams()
 	t_pred = asami.sensor_predict(obs_t) + t[0]
-	plt.plot(obs_t, t, linestyle='dashed')
-	plt.plot(obs_t, t_pred)
-	plt.savefig('plot.png')
+	# plt.plot(obs_t, t, linestyle='dashed')
+	# plt.plot(obs_t, t_pred)
+	# plt.savefig('plot.png')
