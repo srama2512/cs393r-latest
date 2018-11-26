@@ -69,7 +69,7 @@ def merge_obstacle_helper(tent_obs, clusters, max_cid):
 	if len(tent_obs) == 1:
 		return clusters
 
-	ids = tent_obs.keys()
+	ids = list(tent_obs.keys())
 	for i in range(len(ids)):
 		for j in range(i + 1, len(ids)):
 			cid1, cid2 = ids[i], ids[j]
@@ -352,45 +352,24 @@ class RRTPlanner(PathPlanner):
 			self._max_id = 1
 
 		def _get_closest_node(self, pt):
-			nearest_neighs = [k for k, v in sorted(self._nodes.iteritems(), key=lambda kv: kv[1].dist(pt))]
+			nearest_neighs = [k for k, v in sorted(self._nodes.items(), key=lambda kv: kv[1].dist(pt))]
 			return nearest_neighs[0]
 
 		def _add_node(self, pt, nearest):
 			key = self._max_id
 			self._max_id += 1
 			self._nodes[key] = pt
-			self._tree[key] = []
-			self._tree[nearest].append(key)
-			self._tree[key].append(nearest)
+			self._tree[key] = nearest
 
 			return key
 
-		def _dijkstras(self, src, target):
-			min_dist = [float('inf') if i != src else 0.0 for i in range(self._max_id)]
-			visited = [False for i in range(self._max_id)]
-			back_pointers = [None for i in range(self._max_id)]
-			pr_queue = []
-			heapq.heappush(pr_queue, (0., src))
-
-			while len(pr_queue) > 0:
-				cost, idx = heapq.heappop(pr_queue)
-
-				if visited[idx]:
-					continue
-				visited[idx] = True
-
-				for neigh in self._tree[idx]:
-					ecost = self._nodes[neigh].dist(self._nodes[idx])
-					if min_dist[neigh] > cost + ecost:
-						min_dist[neigh] = cost + ecost
-						back_pointers[neigh] = (idx, (self._nodes[idx], self._nodes[neigh], 'line'))
-						heapq.heappush(pr_queue, (cost + ecost, neigh))
-
+		def _get_path(self, src, target):
 			path = []
-			idx = target
-			while idx != 0:
-				path.append(back_pointers[idx][1])
-				idx = back_pointers[idx][0]
+
+			while target != src:
+				parent = self._tree[target]
+				path.append((self._nodes[parent], self._nodes[target], 'line'))
+				target = parent
 
 			path.reverse()
 			return path
@@ -400,11 +379,13 @@ class RRTPlanner(PathPlanner):
 		self._obstacles = []
 		self._target = None
 		self._path = None
-		self._delta_q = 20.
+		self._delta_q = 100.
+		self._target_bias = 0.05
 		self._tree = self.RRT()
 
 		self._xmin, self._xmax = -1000.0, 3000.0
 		self._ymin, self._ymax = -2000.0, 2000.0
+		self._bound_tolerance = 0.1
 
 		self._max_tree_size = 200
 		self._target_tolerance = 20.
@@ -415,6 +396,14 @@ class RRTPlanner(PathPlanner):
 		self._xmax = max([pt.x for pt in points])
 		self._ymin = min([pt.y for pt in points])
 		self._ymax = max([pt.y for pt in points])
+
+		xspan = self._xmax - self._xmin
+		self._xmin -= xspan * self._bound_tolerance
+		self._xmax += xspan * self._bound_tolerance
+		yspan = self._ymax - self._ymin
+		self._ymin -= yspan * self._bound_tolerance
+		self._ymax += yspan * self._bound_tolerance
+
 
 	def _add_node_to_tree_multiple(self, q_rand):
 		q_near_key = self._tree._get_closest_node(q_rand)
@@ -468,13 +457,16 @@ class RRTPlanner(PathPlanner):
 			if t_near.dist(self._target) < self._target_tolerance:
 				break
 
-			q_rand = self._get_random_point()
+			if randu(0., 1.) < self._target_bias:
+				q_rand = self._target
+			else:
+				q_rand = self._get_random_point()
 			self._add_node_to_tree_single(q_rand)
 
 		src = 0
 		target = self._tree._get_closest_node(self._target)
 
-		return self._tree._dijkstras(src, target)
+		return self._tree._get_path(src, target)
 
 	def update(self, obstacles, target):
 		if target is None:
