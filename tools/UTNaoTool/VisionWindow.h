@@ -127,6 +127,7 @@ class VisionWindow : public ConfigWindow, public Ui_UTVisionWindow {
     void drawRawImage(ImageWidget*);
     void drawSmallSegmentedImage(ImageWidget *image);
     void drawSegmentedImage(ImageWidget *image);
+    void drawObstacles(ImageWidget* image);
     void drawBeacons(ImageWidget *image);
     void changeBigImage(int type, int cam);
     void updateBigImage();

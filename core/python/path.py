@@ -156,8 +156,8 @@ class PotentialPathPlanner(PathPlanner):
 		self._path = None
 		self._goal_eps = 10.
 		self._k_attr = 1.0
-		self._k_rep = 10000.0
-		self.q_star_mult = 5.
+		self._k_rep = 300000.0
+		self.q_star_mult = 3.
 		self.max_path_len = 20
 
 	def distance_to_target(self, curr_pos, target):
@@ -346,7 +346,7 @@ class GeometricPathPlanner(PathPlanner):
 
 		return self._path
 
-class RRTPlanner(PathPlanner):
+class RRTPathPlanner(PathPlanner):
 
 	class RRT:
 		def __init__(self):
@@ -378,7 +378,7 @@ class RRTPlanner(PathPlanner):
 			return path
 
 	def __init__(self):
-		super(RRTPlanner, self).__init__()
+		super(RRTPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
 		self._path = None
@@ -480,7 +480,7 @@ class RRTPlanner(PathPlanner):
 
 		return self._path
 
-class RRTStarPlanner(PathPlanner):
+class RRTStarPathPlanner(PathPlanner):
 
 	class RRT:
 		def __init__(self):
@@ -529,11 +529,11 @@ class RRTStarPlanner(PathPlanner):
 			return self._costs[key]
 
 	def __init__(self):
-		super(RRTStarPlanner, self).__init__()
+		super(RRTStarPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
 		self._path = None
-		self._delta_q = 100.
+		self._delta_q = 500.
 		self._target_bias = 0.05
 		self._tree = self.RRT()
 
@@ -629,7 +629,25 @@ class RRTStarPlanner(PathPlanner):
 		src = 0
 		target = self._tree._get_closest_node(self._target)
 
-		return self._tree._get_path(src, target)
+		path = self._tree._get_path(src, target)
+
+		return path
+
+	def _simplify_path(self, path):
+		if path is None or len(path) < 2:
+			return path
+
+		src = path[0][0]
+
+		for i, line in enumerate(path):
+			if i == 0:
+				continue
+			shortcut = Line2D(src, line[1])
+			if self._is_overlapping(shortcut):
+				ret_path = [(src, path[i - 1][1], 'line')] + path[i:]
+				return ret_path
+
+		return [(src, path[-1][1], 'line')]
 
 	def update(self, obstacles, target):
 		if target is None:
@@ -639,5 +657,6 @@ class RRTStarPlanner(PathPlanner):
 		if self._inside_obstacles(Point2D(0., 0.)):
 			return None
 		self._path = self._plan()
+		self._path = self._simplify_path(self._path)
 
 		return self._path

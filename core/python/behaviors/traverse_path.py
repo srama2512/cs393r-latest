@@ -107,6 +107,8 @@ class Playing(LoopingStateMachine):
                 self.planner = GeometricPathPlanner()
             elif planner_type == 'apm':
                 self.planner = PotentialPathPlanner()
+            elif planner_type == 'rrtstar':
+                self.planner = RRTStarPathPlanner()
             else:
                 raise NotImplementedError('Unsupported path planner type')
             self._obstacles = []
@@ -214,7 +216,7 @@ class Playing(LoopingStateMachine):
 
 
     def setup(self):
-        traverse_path = self.TraversePath()
+        traverse_path = self.TraversePath(planner_type='rrtstar')
         stand = self.Stand()
         center = self.HeadPos(0, 0)
         off = self.Off()

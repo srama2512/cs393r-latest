@@ -76,6 +76,7 @@ void VisionWindow::updateBigImage() {
     if (cbxOverlay->isChecked()) {
       drawGoal(bigImage);
       drawBall(bigImage);
+      drawObstacles(bigImage);
       drawBallCands(bigImage);
       drawBeacons(bigImage);
     }
@@ -91,6 +92,7 @@ void VisionWindow::redrawImages(ImageWidget* rawImage, ImageWidget* segImage, Im
 
   objImage->fill(0);
   drawBall(objImage);
+  drawObstacles(objImage);
 
   if(cbxHorizon->isChecked()) {
     drawHorizonLine(rawImage);
@@ -103,16 +105,19 @@ void VisionWindow::redrawImages(ImageWidget* rawImage, ImageWidget* segImage, Im
   if (cbxOverlay->isChecked()) {
     drawGoal(rawImage);
     drawBall(rawImage);
+    drawObstacles(rawImage);
     drawBallCands(rawImage);
     drawBeacons(rawImage);
 
     drawGoal(segImage);
     drawBall(segImage);
+    drawObstacles(segImage);
     drawBallCands(segImage);
     drawBeacons(segImage);
   }
 
   drawBall(verticalBlobImage);
+  drawObstacles(verticalBlobImage);
   drawBallCands(verticalBlobImage);
 
   transformedImage->fill(0);
@@ -226,6 +231,24 @@ void VisionWindow::drawBall(ImageWidget* image) {
         (!ball->fromTopCamera && _widgetAssignments[image] == Camera::TOP) ) return;
     int radius = ball->radius;
     painter.drawEllipse(ball->imageCenterX - radius, ball->imageCenterY - radius, radius * 2, radius * 2);
+  }
+}
+
+void VisionWindow::drawObstacles(ImageWidget* image) {
+  if(!config_.all) return;
+  if(!config_.ball) return;
+  QPainter painter(image->getImage());
+  painter.setPen(QPen(QColor(0, 255, 127), 3));
+  
+  if(world_object_block_ != NULL) {
+    for(int i = 0; i < 5; ++i) {
+      WorldObject* obs = &world_object_block_->objects_[WO_OPPONENT1 + i];
+      if(!obs->seen) continue;
+      if( (obs->fromTopCamera && _widgetAssignments[image] == Camera::BOTTOM) ||
+          (!obs->fromTopCamera && _widgetAssignments[image] == Camera::TOP) ) continue;
+      int radius = obs->radius;
+      painter.drawEllipse(obs->imageCenterX - radius, obs->imageCenterY - radius, radius * 2, radius * 2);
+    }
   }
 }
 

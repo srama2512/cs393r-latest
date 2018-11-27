@@ -17,6 +17,8 @@
 #include <vector>
 #include <math/KalmanFilter.h>
 
+#define SAME_OBS_DIST_THRESH 200
+
 class BallDetector;
 class Classifier;
 class BeaconDetector;
@@ -98,6 +100,7 @@ class ImageProcessor {
     void detectBall();
     void findBall(int& imageX, int& imageY);
     void detectGoal();
+    void printObstacles();
     void findGoal(int& imageX, int& imageY);
     void detectGoalLine();
     void detectObstacles();

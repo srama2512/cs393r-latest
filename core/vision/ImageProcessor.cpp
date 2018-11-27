@@ -274,6 +274,14 @@ void ImageProcessor::setCalibration(const RobotCalibration& calibration){
   *calibration_ = calibration;
 }
 
+void ImageProcessor::printObstacles() {
+    for(int i = 0; i < 5; ++i) {
+        WorldObject* obs = &vblocks_.world_object->objects_[WO_OPPONENT1 + i];
+        cout << "camera: " << (obs->fromTopCamera ? "top" : "bottom") << " " << obs->visionDistance << " " << obs->visionBearing << endl;
+    }
+    cout << endl;
+}
+
 void ImageProcessor::processFrame(){
   // if(vblocks_.robot_state->WO_SELF == WO_TEAM_COACH && camera_ == Camera::BOTTOM) return;
 
@@ -290,26 +298,54 @@ void ImageProcessor::processFrame(){
   detected_blobs = calculateBlobs();
   // detectBall();
   detectObstacles();
-  if(camera_ == Camera::BOTTOM) {
-    detectGoalLine();
-    return; 
-  }
+  // printObstacles();
+  // if(camera_ == Camera::BOTTOM) {
+  //   detectGoalLine();
+  //   return; 
+  // }
 
-  detectGoal();
+  // detectGoal();
   beacon_detector_->findBeacons(detected_blobs);
   // obstacle_detector_->findObstacles();
 }
 
 void ImageProcessor::detectObstacles() {
-    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 50);
+    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 20);
     sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
 
-    for(int i = 0; i < min(5, (int)orangeBlobs.size()); ++i) {
-        WorldObject* obs = &vblocks_.world_object->objects_[WO_OPPONENT1 + i];
+    for(int i = 0; i < orangeBlobs.size(); ++i) {
+        bool found = false;
+        int obs_idx = 0;
+        for(obs_idx = 0; obs_idx < 5; ++obs_idx) {
+            WorldObject* obs = &vblocks_.world_object->objects_[WO_OPPONENT1 + obs_idx];
+            if(obs->seen == false)
+                break;
+            if(camera_ == Camera::TOP && obs->fromTopCamera)
+                continue;
+            else if(camera_ == Camera::BOTTOM && (!obs->fromTopCamera))
+                continue;
+            int imageX = orangeBlobs[i].avgX;
+            int imageY = orangeBlobs[i].avgY;
+            Position p = cmatrix_.getWorldPosition(imageX, imageY);
+            double r1 = cmatrix_.groundDistance(p);
+            double t1 = cmatrix_.bearing(p);
+            double r2 = obs->visionDistance;
+            double t2 = obs->visionBearing;
+            double dist = sqrt(r1 * r1 + r2 * r2 - 2.0 * r1 * r2 * cos(t2 - t1));
 
+            if(dist < SAME_OBS_DIST_THRESH) {
+                found = true;
+                break;
+            }
+        }
+
+        if(found || obs_idx == 5)
+            continue;
+
+        WorldObject* obs = &vblocks_.world_object->objects_[WO_OPPONENT1 + obs_idx];
         obs->imageCenterX = orangeBlobs[i].avgX;
         obs->imageCenterY = orangeBlobs[i].avgY;
-        obs->radius = 250.0;
+        obs->radius = (orangeBlobs[i].dx + orangeBlobs[i].dy) / 4;
 
         Position p = cmatrix_.getWorldPosition(obs->imageCenterX, obs->imageCenterY);
         obs->visionBearing = cmatrix_.bearing(p);
