@@ -127,6 +127,8 @@ elif args.planner == 'geo':
 	planner = GeometricPathPlanner()
 elif args.planner == 'rrt':
 	planner = RRTPlanner()
+elif args.planner == 'rrtstar':
+	planner = RRTStarPlanner()
 else:
 	raise NotImplementedError('unknown planner type')
 

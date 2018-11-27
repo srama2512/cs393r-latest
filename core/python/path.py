@@ -106,6 +106,9 @@ class Line2D:
 		self.pt1 = p1
 		self.pt2 = p2
 
+	def cost(self):
+		return self.pt1.dist(self.pt2)
+
 	def _intersect_with_circle(self, obs):
 		a = (self.pt2.x - self.pt1.x) ** 2 + (self.pt2.y - self.pt1.y) ** 2
 		b = 2. * ((self.pt1.x - obs.pos.x) * (self.pt2.x - self.pt1.x) + \
@@ -348,7 +351,7 @@ class RRTPlanner(PathPlanner):
 	class RRT:
 		def __init__(self):
 			self._nodes = {0: Point2D(0., 0.)}
-			self._tree = {0: []}
+			self._parent_ptr = {0: None}
 			self._max_id = 1
 
 		def _get_closest_node(self, pt):
@@ -359,7 +362,7 @@ class RRTPlanner(PathPlanner):
 			key = self._max_id
 			self._max_id += 1
 			self._nodes[key] = pt
-			self._tree[key] = nearest
+			self._parent_ptr[key] = nearest
 
 			return key
 
@@ -367,7 +370,7 @@ class RRTPlanner(PathPlanner):
 			path = []
 
 			while target != src:
-				parent = self._tree[target]
+				parent = self._parent_ptr[target]
 				path.append((self._nodes[parent], self._nodes[target], 'line'))
 				target = parent
 
@@ -473,6 +476,168 @@ class RRTPlanner(PathPlanner):
 			return None
 		self._obstacles = obstacles
 		self._target = target
+		self._path = self._plan()
+
+		return self._path
+
+class RRTStarPlanner(PathPlanner):
+
+	class RRT:
+		def __init__(self):
+			self._nodes = {0: Point2D(0., 0.)}
+			self._parent_ptr = {0: None}
+			self._costs = {0: 0}
+			self._max_id = 1
+
+		def _get_closest_node(self, pt):
+			nearest_neighs = [k for k, v in sorted(self._nodes.items(), key=lambda kv: kv[1].dist(pt))]
+			return nearest_neighs[0]
+
+		def _get_closest_nodes_in_radius(self, pt, radius):
+			near = [k for k, v in self._nodes.items() if v.dist(pt) <= radius]
+			return near
+
+		def _add_node(self, pt, nearest_key):
+			key = self._max_id
+			self._max_id += 1
+			self._nodes[key] = pt
+			self._parent_ptr[key] = nearest_key
+			self._costs[key] = self._costs[nearest_key] + pt.dist(self._nodes[nearest_key])
+
+			return key
+
+		def _move_parent(self, q_near_key, q_new_key):
+			self._parent_ptr[q_near_key] = q_new_key
+			self._costs[q_near_key] = self._costs[q_new_key] + \
+				self._nodes[q_near_key].dist(self._nodes[q_new_key])
+
+		def _get_path(self, src, target):
+			path = []
+
+			while target != src:
+				parent = self._parent_ptr[target]
+				path.append((self._nodes[parent], self._nodes[target], 'line'))
+				target = parent
+
+			path.reverse()
+			return path
+
+		def num_nodes(self):
+			return len(self._nodes)
+
+		def cost(self, key):
+			return self._costs[key]
+
+	def __init__(self):
+		super(RRTStarPlanner, self).__init__()
+		self._obstacles = []
+		self._target = None
+		self._path = None
+		self._delta_q = 100.
+		self._target_bias = 0.05
+		self._tree = self.RRT()
+
+		self._xmin, self._xmax = -1000.0, 3000.0
+		self._ymin, self._ymax = -2000.0, 2000.0
+		self._bound_tolerance = 0.1
+
+		self._max_tree_size = 200
+		self._target_tolerance = 20.
+		self._gamma = 10000
+
+	def _get_search_bounds(self):
+		points = [Point2D(0., 0.), self._target] + [obs.pos for obs in self._obstacles]
+		self._xmin = min([pt.x for pt in points])
+		self._xmax = max([pt.x for pt in points])
+		self._ymin = min([pt.y for pt in points])
+		self._ymax = max([pt.y for pt in points])
+
+		xspan = self._xmax - self._xmin
+		self._xmin -= xspan * self._bound_tolerance
+		self._xmax += xspan * self._bound_tolerance
+		yspan = self._ymax - self._ymin
+		self._ymin -= yspan * self._bound_tolerance
+		self._ymax += yspan * self._bound_tolerance
+
+	def _is_overlapping(self, line):
+		overlap = [obs for obs in self._obstacles if line._intersect_with_circle(obs)]
+		return len(overlap) > 0
+
+	def _inside_obstacles(self, pt):
+		obstacles = [obs for obs in self._obstacles if obs._is_inside(pt)]
+		return len(obstacles) > 0
+
+	def _add_node_to_tree_single(self, q_rand):
+		q_nearest_key = self._tree._get_closest_node(q_rand)
+		q_nearest = self._tree._nodes[q_nearest_key]
+		n = self._tree.num_nodes()
+		radius = min(math.sqrt(self._gamma * math.log(n) / n), self._delta_q)
+
+		if q_nearest.dist(q_rand) < self._delta_q:
+			q_new = q_rand
+		else:
+			q_new = q_nearest.pt_in_dir(q_rand, self._delta_q)
+
+		q_nears = self._tree._get_closest_nodes_in_radius(q_new, radius)
+
+		line = Line2D(q_nearest, q_new)
+
+		if not self._is_overlapping(line):
+
+			q_min_key = q_nearest_key
+			cost_min = self._tree.cost(q_min_key) + line.cost()
+
+			for q_near_key in q_nears:
+				line_ = Line2D(self._tree._nodes[q_near_key], q_new)
+				if self._is_overlapping(line_):
+					continue
+				c_ = self._tree.cost(q_near_key) + line_.cost()
+				if c_ < cost_min:
+					q_min_key = q_near_key
+					cost_min = c_
+
+			q_new_key = self._tree._add_node(q_new, q_min_key)
+			q_nears = [q for q in q_nears if q != q_min_key]
+
+			for q_near_key in q_nears:
+				line_ = Line2D(q_new, self._tree._nodes[q_near_key])
+				if self._is_overlapping(line_):
+					continue
+				if self._tree.cost(q_near_key) > self._tree.cost(q_new_key) + line_.cost():
+					self._tree._move_parent(q_near_key, q_new_key)
+
+
+	def _get_random_point(self):
+		return Point2D(randu(self._xmin, self._xmax), randu(self._ymin, self._ymax))
+
+	def _plan(self):
+		self._tree = self.RRT()
+		self._get_search_bounds()
+
+		while self._tree._max_id < self._max_tree_size:
+			t_near_key = self._tree._get_closest_node(self._target)
+			t_near = self._tree._nodes[t_near_key]
+			if t_near.dist(self._target) < self._target_tolerance:
+				break
+
+			if randu(0., 1.) < self._target_bias:
+				q_rand = self._target
+			else:
+				q_rand = self._get_random_point()
+			self._add_node_to_tree_single(q_rand)
+
+		src = 0
+		target = self._tree._get_closest_node(self._target)
+
+		return self._tree._get_path(src, target)
+
+	def update(self, obstacles, target):
+		if target is None:
+			return None
+		self._obstacles = obstacles
+		self._target = target
+		if self._inside_obstacles(Point2D(0., 0.)):
+			return None
 		self._path = self._plan()
 
 		return self._path
