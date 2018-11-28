@@ -174,21 +174,27 @@ void MotionCore::processMotionFrame() {
     walk_request_->stand();
   }
 
-  // kicks need to be before walk, so that they can change the walk request
-  // cout << "Walk motion_" << walk_request_->motion_  << endl;
-  if (kick_request_->kick_type_ == Kick::STRAIGHT || kick_request_->kick_running_ == true){
-    cout << "===> processMotionFrame: Processing kick request" << endl;
+  if (use_com_kick_) {
     kick_->processFrame();
   }
-  else if (walk_request_->walk_to_target_ == true){
-    // cout << "===> processMotionFrame: Processing motion request" << endl;
+  else {
     motion_->processFrame();
   }
-  else {
-    // cout << "===> processMotionFrame: kick_type: " << kick_request_->kick_type_ << endl;
-    // cout << "===> processMotionFrame: walk_type: " << walk_request_->motion_ << endl;
-    // cout << "===> processMotionFrame: Did not enter kick or motion" << endl;
-  }
+  // kicks need to be before walk, so that they can change the walk request
+  // cout << "Walk motion_" << walk_request_->motion_  << endl;
+  // if (kick_request_->kick_type_ == Kick::STRAIGHT || kick_request_->kick_running_ == true){
+  //   cout << "===> processMotionFrame: Processing kick request" << endl;
+  //   kick_->processFrame();
+  // }
+  // else if (walk_request_->walk_to_target_ == true){
+  //   // cout << "===> processMotionFrame: Processing motion request" << endl;
+  //   motion_->processFrame();
+  // }
+  // else {
+  //   // cout << "===> processMotionFrame: kick_type: " << kick_request_->kick_type_ << endl;
+  //   // cout << "===> processMotionFrame: walk_type: " << walk_request_->motion_ << endl;
+  //   // cout << "===> processMotionFrame: Did not enter kick or motion" << endl;
+  // }
 
 
   if (walk_ != NULL) {
