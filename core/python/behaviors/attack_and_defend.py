@@ -156,7 +156,7 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.1, goal_b_offset=-0.3, ball_x_threshold=130.0, ball_y_offset=-75.0, ball_y_threshold=7.0):
+        def __init__(self, goal_b_threshold=0.1, goal_b_offset=-0.3, ball_x_threshold=200.0, ball_y_offset=-75.0, ball_y_threshold=7.0):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.goal_b_offset = goal_b_offset
@@ -203,7 +203,7 @@ class Playing(LoopingStateMachine):
                     self.postFailure()
 
     class Dribble(Node):
-        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=1400.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
+        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=2000.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
             self.goal_b_threshold = goal_b_threshold
             self.goal_x_threshold = goal_x_threshold
             self.ball_x_threshold = ball_x_threshold
