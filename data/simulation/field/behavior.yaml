@@ -8,14 +8,14 @@ objects:
   gtconfig:
     placements_:
       5:
-        x: -650
+        x: 0
         y: 0
         orientation: 1.57079
         height: 0
   bconfig:
     placements_:
       5:
-        x: -650
+        x: 0
         y: 0
         orientation: 1.57079
         height: 0

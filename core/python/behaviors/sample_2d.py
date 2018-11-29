@@ -5,7 +5,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import os
-import pdb
 import pose
 import core
 import math
@@ -14,7 +13,6 @@ import memory
 import commands
 import cfgstiff
 import mem_objects
-import numpy as np
 
 from task import Task
 from behaviors.asami import ASAMI
@@ -22,12 +20,6 @@ from collections import namedtuple
 from state_machine import Node, C, T, StateMachine
 
 observationTuple = namedtuple('observationTuple', ['height', 'bearing', 'beacon_id', 'command', 'dt'])
-
-FIELD_Y = 2000
-FIELD_X = 3000
-
-def _norm_angle(theta):
-    return math.atan2(math.sin(theta), math.cos(theta))
 
 class Ready(Task):
     def run(self):
@@ -90,18 +82,15 @@ class Playing(StateMachine):
         def __init__(self, dimA=3, dimS=3):
             super(Playing.Explore, self).__init__()
             self.control_to_action = {}
-            self.beaconList = [core.WO_BEACON_BLUE_YELLOW,
+            self.beaconList = [core.WO_BEACON_BLUE_YELLOW
                                core.WO_BEACON_YELLOW_BLUE,
-                               core.WO_BEACON_BLUE_PINK,
-                               core.WO_BEACON_PINK_BLUE,
-                               core.WO_BEACON_PINK_YELLOW,
+                               core.WO_BEACON_BLUE_PINK
+                               core.WO_BEACON_PINK_BLUE
+                               core.WO_BEACON_PINK_YELLOW
                                core.WO_BEACON_YELLOW_PINK]
             count = 0
-            self.b_angles = [0, math.pi/4, -math.pi/4, math.pi/2, -math.pi/2, math.pi*3./4., -math.pi*3./4., math.pi]
-            self.a_vels = [-1./2., -1./6., 0., 1./6., 1./2.]
-
-            for a in self.a_vels:
-                for b in self.b_angles:
+            for a in [-1./2., -1./6., 0., 1./6., 1./2.]:
+                for b in [0, math.pi/4, -math.pi/4, math.pi/2, -math.pi/2, math.pi*3./4., -math.pi*3./4., math.pi]:
                     magn = math.sqrt(1 - a**2)
                     vx = magn*math.cos(b)
                     vy = magn*math.sin(b)
@@ -110,31 +99,21 @@ class Playing(StateMachine):
 
             self.startTime = self.getTime()
             self.lastFrameTime = None
-            # self.lastBeaconSeenTime = self.getTime()
             self.lastControlTime = None
             self.lastControl = None
             self.logger = open('2d_asami_data.txt', 'w')
             self.logger.write('ht, bear, bid, cmd, dt\n')
-            self.logger.flush()
 
         def run(self):
 
             beacons = map(lambda x: mem_objects.world_objects[x], self.beaconList)
-            # robot_state = mem_objects.memory.world_objects.getObjPtr(mem_objects.memory.robot_state.WO_SELF)
-            # locX, locY = robot_state.loc.x, robot_state.loc.y
-            # locTheta = robot_state.orientation
 
-            playerObj =  mem_objects.world_objects[core.WO_TEAM5]
-            locX = playerObj.loc.x
-            locY = playerObj.loc.y
-            locTheta = playerObj.orientation
-            print('locX: {}, locY: {}, locTheta: {}'.format(locX, locY, locTheta))
             # ['height', 'bearing', 'beacon_id', 'command', 'dt']
             height = -1000
             bearing = -1000
             beacon_id = -1000
             if self.lastFrameTime is not None:
-                bs = list(enumerate(beacons))
+                bs = enumerate(beacons)
                 random.shuffle(bs)
                 for bid, beacon in bs:
                     if beacon.seen:
@@ -142,7 +121,6 @@ class Playing(StateMachine):
                         height = beacon.radius
                         bearing = beacon.visionBearing
                         beacon_id = bid
-                        self.lastBeaconSeenTime = self.getTime()
                         break
 
                 command = self.lastControl
@@ -151,14 +129,6 @@ class Playing(StateMachine):
 
             if self.lastControl is None or self.getTime() - self.lastControlTime > 3.0:
                 self.lastControl = random.randint(0, len(self.control_to_action)-1)
-                self.lastControlTime = self.getTime()
-
-            # if self.getTime() - self.lastBeaconSeenTime > 5.0:
-            #     self.lastControl = 
-            # nuclear option
-            if abs(locX) > FIELD_X / 2.5 or abs(locY) > FIELD_Y / 2.5:
-                b_to_origin = _norm_angle(math.atan2(locY, locX) + math.pi - locTheta)
-                self.lastControl = np.argmin((b_to_origin - np.array(self.b_angles))**2) + len(self.b_angles)*2
                 self.lastControlTime = self.getTime()
 
             action = self.control_to_action[self.lastControl]

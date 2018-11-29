@@ -140,9 +140,9 @@ BehaviorSimulation::BehaviorSimulation(bool lmode) : lmode_(lmode) {
     else
     {
       std::cout << "Active player: " << i << std::endl;
-      gtcache.world_object->objects_[i].loc.x = -650;
+      gtcache.world_object->objects_[i].loc.x = 0;
       gtcache.world_object->objects_[i].loc.y = 0;
-      gtcache.world_object->objects_[i].orientation = M_PI/2.0;
+      gtcache.world_object->objects_[i].orientation = 0.0;
 
       std::cout << "Poses: loc -- " << gtcache.world_object->objects_[i].loc << " --  orientation " << gtcache.world_object->objects_[i].orientation << std::endl;
     }
@@ -169,9 +169,9 @@ BehaviorSimulation::BehaviorSimulation(bool lmode) : lmode_(lmode) {
     else
     {
       std::cout << "Active player: " << i << std::endl;
-      gtcache.world_object->objects_[i].loc.x = -HALF_FIELD_X/2;
+      gtcache.world_object->objects_[i].loc.x = 0;
       gtcache.world_object->objects_[i].loc.y = 0;
-      gtcache.world_object->objects_[i].orientation = M_PI/2.0;
+      gtcache.world_object->objects_[i].orientation = 0.0;
 
       std::cout << "Poses: loc -- " << gtcache.world_object->objects_[i].loc << " --  orientation " << gtcache.world_object->objects_[i].orientation << std::endl;
     }

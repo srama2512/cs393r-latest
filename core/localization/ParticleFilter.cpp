@@ -156,8 +156,8 @@ void ParticleFilter::addRandomParticles() {
     int idx = rand() % n_particles;
     auto& p = particles()[idx];
 
-    p.x = Random::inst().sampleU(350, 1000);
-    p.y = Random::inst().sampleU(-700, 700);
+    p.x = Random::inst().sampleU(-1500, 1500);
+    p.y = Random::inst().sampleU(-1000, 1000);
     p.t = Random::inst().sampleU(-M_PI, M_PI);
   }
 }
@@ -371,8 +371,8 @@ void ParticleFilter::reset() {
   particles().resize(n_particles);
 
   for(auto& p : particles()) {
-    p.x = Random::inst().sampleU(-1000, 1000);
-    p.y = Random::inst().sampleU(-1750, 1750);
+    p.x = Random::inst().sampleU(-1500, 1500);
+    p.y = Random::inst().sampleU(-1000, 1000);
     p.t = Random::inst().sampleU(-M_PI, M_PI);
     p.w = loge((double) Random::inst().sampleU());
   }
