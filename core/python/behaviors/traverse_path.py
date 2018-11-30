@@ -14,6 +14,7 @@ import cfgstiff
 from state_machine import StateMachine, Node, C, T, F, LoopingStateMachine
 from pid_controller import *
 from path import *
+import time
 
 TARGET_ENUM = core.WO_BEACON_YELLOW_BLUE
 
@@ -99,6 +100,7 @@ class Playing(LoopingStateMachine):
                 self.postFailure()
 
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
+            commands.setWalkVelocity(0., 0., 0.)
 
     class TraversePath(Node):
         def __init__(self, planner_type='geo', delta_pan=6, dist_target_thresh=500.0):
@@ -147,9 +149,6 @@ class Playing(LoopingStateMachine):
                 self.ewma_dist_target.update(target.visionDistance)
 
             self._obstacles = [Obstacle(*self._get_egocentric(obs.visionDistance, obs.visionBearing), r=250.0) for obs in opponents]
-            
-            if self._target is not None and len([o for o in self._obstacles if o._is_inside(self._target)]) > 0:
-                print ('Warning: target inside obstacle')
 
             return target.seen
 
@@ -181,11 +180,20 @@ class Playing(LoopingStateMachine):
                        pan += self.delta_pan
                 
                 pan = self.clip(pan, -75.0*core.DEG_T_RAD, 75.0*core.DEG_T_RAD)
+                t1 = time.time()
                 path = self.planner.update(self._obstacles, self._target)
+                t2 = time.time()
+                # t2 = self.getTime()
+                print ("=====> Time to plan:", t2-t1)
+
                 self.last_seen = self.getTime()
             else:
                 pan = core.joint_values[core.HeadYaw]
+                t1 = time.time()
                 path = self.planner.update(self._obstacles, self._target)
+                t2 = time.time()
+                # t2 = self.getTime()
+                print ("=====> Time to plan:", t2-t1)
 
                 if self.getTime() - self.last_seen > 2.0:
                     commands.setWalkVelocity(0.0, 0.0, 0.0)
@@ -193,7 +201,7 @@ class Playing(LoopingStateMachine):
 
             self._print_path(path)
 
-            if path is None:
+            if path is None or len(path) == 0:
                 vel_x, vel_y, vel_t = 0, 0, 0
             else:
                 pt = path[0][1]
@@ -216,7 +224,7 @@ class Playing(LoopingStateMachine):
 
 
     def setup(self):
-        traverse_path = self.TraversePath(planner_type='rrtstar')
+        traverse_path = self.TraversePath(planner_type='apm')
         stand = self.Stand()
         center = self.HeadPos(0, 0)
         off = self.Off()
@@ -231,5 +239,5 @@ class Playing(LoopingStateMachine):
         self.add_transition(leftSearch, F, rightSearch)
         self.add_transition(rightSearch, C, traverse_path)
         self.add_transition(rightSearch, F, center)
-        self.add_transition(traverse_path, C, pose.Sit(), C, off)
+        self.add_transition(traverse_path, C, self.Stand(), C, pose.Sit(), C, off)
         self.add_transition(traverse_path, F, center)

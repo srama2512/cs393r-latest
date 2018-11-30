@@ -152,12 +152,12 @@ class PotentialPathPlanner(PathPlanner):
 		super(PotentialPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._stepsize = 0.1
+		self._stepsize = 1.0
 		self._path = None
 		self._goal_eps = 10.
 		self._k_attr = 1.0
-		self._k_rep = 300000.0
-		self.q_star_mult = 3.
+		self._k_rep = 100000.0
+		self.q_star_mult = 5.
 		self.max_path_len = 20
 
 	def distance_to_target(self, curr_pos, target):
@@ -338,6 +338,12 @@ class GeometricPathPlanner(PathPlanner):
 		self._obstacles = merge_obstacles(obstacles)
 		self._target = target
 		self._vis_graph = self.VisibilityGraph()
+		if len([o for o in self._obstacles if o._is_inside(self._target)]) > 0:
+			print ('\n\n\n Warning: Target inside obstacle circle \n\n\n')
+			return self._path
+		if len([o for o in self._obstacles if o._is_inside(Point2D(0., 0.))]) > 0:
+			print ('\n\n\n Warning: Source inside obstacle circle \n\n\n')
+			return self._path
 		try:
 			self._update_visibility_graph(Point2D(0, 0), self._target)
 			self._path = self._vis_graph.dijkstras()
@@ -533,7 +539,7 @@ class RRTStarPathPlanner(PathPlanner):
 		self._obstacles = []
 		self._target = None
 		self._path = None
-		self._delta_q = 500.
+		self._delta_q = 200.
 		self._target_bias = 0.05
 		self._tree = self.RRT()
 
@@ -541,8 +547,9 @@ class RRTStarPathPlanner(PathPlanner):
 		self._ymin, self._ymax = -2000.0, 2000.0
 		self._bound_tolerance = 0.1
 
-		self._max_tree_size = 200
-		self._target_tolerance = 20.
+		self._max_tree_size = 50
+		self._max_samples = 100
+		self._target_tolerance = 200.
 		self._gamma = 10000
 
 	def _get_search_bounds(self):
@@ -606,6 +613,19 @@ class RRTStarPathPlanner(PathPlanner):
 				if self._tree.cost(q_near_key) > self._tree.cost(q_new_key) + line_.cost():
 					self._tree._move_parent(q_near_key, q_new_key)
 
+	def _is_old_path_valid(self):
+		if self._path is None or len(self._path) == 0:
+			print ('\n\n Path empty\n\n')
+			return False
+
+		for l in self._path:
+			line_ = Line2D(l[0], l[1])
+			if len([o for o in self._obstacles if line_._intersect_with_circle(o)]) > 0:
+				print ('\n\n Path IS intersecting\n\n')
+				return False
+
+		print ('\n\n Path is NOT intersecting\n\n')
+		return True
 
 	def _get_random_point(self):
 		return Point2D(randu(self._xmin, self._xmax), randu(self._ymin, self._ymax))
@@ -613,8 +633,9 @@ class RRTStarPathPlanner(PathPlanner):
 	def _plan(self):
 		self._tree = self.RRT()
 		self._get_search_bounds()
+		sample_cnt = 0
 
-		while self._tree._max_id < self._max_tree_size:
+		while self._tree._max_id < self._max_tree_size and sample_cnt < self._max_samples:
 			t_near_key = self._tree._get_closest_node(self._target)
 			t_near = self._tree._nodes[t_near_key]
 			if t_near.dist(self._target) < self._target_tolerance:
@@ -625,6 +646,7 @@ class RRTStarPathPlanner(PathPlanner):
 			else:
 				q_rand = self._get_random_point()
 			self._add_node_to_tree_single(q_rand)
+			sample_cnt += 1
 
 		src = 0
 		target = self._tree._get_closest_node(self._target)
@@ -655,7 +677,9 @@ class RRTStarPathPlanner(PathPlanner):
 		self._obstacles = obstacles
 		self._target = target
 		if self._inside_obstacles(Point2D(0., 0.)):
-			return None
+			return self._path
+		# if self._is_old_path_valid():
+		# 	return self._path
 		self._path = self._plan()
 		self._path = self._simplify_path(self._path)
 

@@ -310,7 +310,7 @@ void ImageProcessor::processFrame(){
 }
 
 void ImageProcessor::detectObstacles() {
-    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 20);
+    auto orangeBlobs = filterBlobs(detected_blobs, c_ORANGE, 35);
     sort(orangeBlobs.begin(), orangeBlobs.end(), BlobCompare);
 
     for(int i = 0; i < orangeBlobs.size(); ++i) {
