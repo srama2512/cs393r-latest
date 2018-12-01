@@ -23,8 +23,8 @@ from state_machine import Node, C, T, StateMachine
 
 observationTuple = namedtuple('observationTuple', ['height', 'bearing', 'beacon_id', 'command', 'dt'])
 
-FIELD_Y = 2000
-FIELD_X = 3000
+FIELD_Y = 3600
+FIELD_X = 5400
 
 def _norm_angle(theta):
     return math.atan2(math.sin(theta), math.cos(theta))
@@ -97,7 +97,7 @@ class Playing(StateMachine):
                                core.WO_BEACON_PINK_YELLOW,
                                core.WO_BEACON_YELLOW_PINK]
             count = 0
-            self.b_angles = [0, math.pi/4, -math.pi/4, math.pi/2, -math.pi/2, math.pi*3./4., -math.pi*3./4., math.pi]
+            self.b_angles = [0, math.pi, math.pi/4, -math.pi/4, math.pi/2, -math.pi/2, math.pi*3./4., -math.pi*3./4.]
             self.a_vels = [-1./2., -1./6., 0., 1./6., 1./2.]
 
             for a in self.a_vels:
@@ -114,8 +114,28 @@ class Playing(StateMachine):
             self.lastControlTime = None
             self.lastControl = None
             self.logger = open('2d_asami_data.txt', 'w')
-            self.logger.write('ht, bear, bid, cmd, dt\n')
+            self.logger.write('ht, bear, bid, cmd, dt, dist\n')
             self.logger.flush()
+            self.gtStateLogger = open('state_log.txt', 'w')
+            self.gtStateLogger.write('X, Y, theta\n')
+            self.gtStateLogger.flush()
+            self.control_sequence = list(range(len(self.control_to_action)))
+            self.generate_control_sequence()
+            self.status = 0
+            self.scanningLeft = True
+            self.headPanThres = 70.0 * core.DEG_T_RAD
+
+        def generate_control_sequence(self):
+            a_idxs = list(range(len(self.a_vels)))
+            random.shuffle(a_idxs)
+            b_idxs = list(range(len(self.b_angles)//2))
+            random.shuffle(b_idxs)
+            self.control_sequence = []
+            for i in a_idxs:
+                for j in b_idxs:
+                    self.control_sequence.append(i*len(self.b_angles) + j*2)
+                    self.control_sequence.append(i*len(self.b_angles) + j*2+1)
+
 
         def run(self):
 
@@ -133,6 +153,7 @@ class Playing(StateMachine):
             height = -1000
             bearing = -1000
             beacon_id = -1000
+            distance = -1000
             if self.lastFrameTime is not None:
                 bs = list(enumerate(beacons))
                 random.shuffle(bs)
@@ -140,6 +161,7 @@ class Playing(StateMachine):
                     if beacon.seen:
                         # print('beacon positions: ', beacon.visionDistance, beacon.visionBearing)
                         height = beacon.radius
+                        distance = beacon.visionDistance
                         bearing = beacon.visionBearing
                         beacon_id = bid
                         self.lastBeaconSeenTime = self.getTime()
@@ -147,16 +169,22 @@ class Playing(StateMachine):
 
                 command = self.lastControl
                 dt = self.getTime() - self.lastFrameTime
-                self.logger.write('{}, {}, {}, {}, {}\n'.format(height, bearing, beacon_id, command, dt))
+                self.logger.write('{}, {}, {}, {}, {}, {}\n'.format(height, bearing, beacon_id, command, dt, distance))
+                self.gtStateLogger.write('{}, {}, {}\n'.format(locX, locY, _norm_angle(locTheta)))
 
             if self.lastControl is None or self.getTime() - self.lastControlTime > 3.0:
-                self.lastControl = random.randint(0, len(self.control_to_action)-1)
+                #     self.lastControl = random.randint(0, len(self.control_to_action)-1)
+                #     self.lastControlTime = self.getTime()
+                # else:
+                #     self.lastControl = self.
+                self.lastControl = self.control_sequence[self.status]
+                self.status = (self.status + 1)%len(self.control_to_action)
                 self.lastControlTime = self.getTime()
 
             # if self.getTime() - self.lastBeaconSeenTime > 5.0:
             #     self.lastControl = 
             # nuclear option
-            if abs(locX) > FIELD_X / 2.5 or abs(locY) > FIELD_Y / 2.5:
+            if abs(locX) > FIELD_X / 2 or abs(locY) > FIELD_Y / 2:
                 b_to_origin = _norm_angle(math.atan2(locY, locX) + math.pi - locTheta)
                 self.lastControl = np.argmin((b_to_origin - np.array(self.b_angles))**2) + len(self.b_angles)*2
                 self.lastControlTime = self.getTime()
@@ -165,12 +193,27 @@ class Playing(StateMachine):
             self.lastFrameTime = self.getTime()
             commands.setWalkVelocity(*action)
 
+            pan = core.joint_values[core.HeadYaw]
+            if pan > self.headPanThres:
+                self.scanningLeft = False
+            elif pan < -self.headPanThres:
+                self.scanningLeft = True
+
+            delta = 20 * core.DEG_T_RAD
+            if self.scanningLeft:
+                commands.setHeadPan(delta, 1.0, True)
+            else:
+                commands.setHeadPan(-delta, 1.0, True)
+
+
+
     class Off(Node):
         def run(self):
             commands.setStiffness(cfgstiff.Zero)
             if self.getTime() > 2.0:
                 memory.speech.say("turned off stiffness")
                 self.finish()
+
 
     def setup(self):
         stand = self.Stand()

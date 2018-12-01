@@ -121,6 +121,8 @@ void ObservationGenerator::generateBeaconObservations() {
     WO_BEACON_PINK_YELLOW,
     WO_BEACON_YELLOW_PINK
   };
+  obsSelf.loc = gtSelf.loc;
+  obsSelf.orientation = gtSelf.orientation;
   for(auto t : types) {
     getObject(gtBeacon, obsBeacon, t);
     float bearing = gtSelf.loc.getBearingTo(gtBeacon.loc,gtSelf.orientation);
@@ -130,7 +132,7 @@ void ObservationGenerator::generateBeaconObservations() {
       float missedObsRate = 1.0/5.0;
       float randPct = Random::inst().sampleU();
       // Only allow beacons to be seen up to 3 meters away
-      if (randPct > (missedObsRate * MISSED_OBS_FACTOR) && distance < 3000){
+      if (randPct > (missedObsRate * MISSED_OBS_FACTOR) && distance < 5000){
         obsBeacon.seen = true;
         float diff = joint_->values_[HeadPan] - bearing;
         obsBeacon.imageCenterX = iparams_.width/2.0 + (diff / (FOVx/2.0) * iparams_.width/2.0);
@@ -142,6 +144,7 @@ void ObservationGenerator::generateBeaconObservations() {
         obsBeacon.visionConfidence = 1.0;
         
         // simulated beacon pixel height
+        float forwardDistance = distance * cos(bearing);
         float thetaTop = 2.0f * atanf(300.0f / 2.0f / distance);
         float thetaBot = 2.0f * atanf(100.0f / 2.0f / distance);
         obsBeacon.radius = (thetaTop - thetaBot) / FOVy * iparams_.height;
@@ -163,7 +166,7 @@ void ObservationGenerator::generateGoalObservations() {
     float distance = gtSelf.loc.getDistanceTo(gtPost.loc);
     if(isVisible(i)) {
       float missedObsRate = 1.0/10.0;
-      if (distance > 3000) 
+      if (distance > 5000) 
         missedObsRate = 1.0/3.0;
       float randPct = Random::inst().sampleU();
       if (randPct > (missedObsRate * MISSED_OBS_FACTOR) && distance < 7000){

@@ -8,7 +8,7 @@
 
 #define getObject(obj, idx) auto& obj = world_object_->objects_[idx]
 #define SECONDS_PER_FRAME (1.0/30.0)
-#define ACCEL_FRAMES 30
+#define ACCEL_FRAMES 5
 #define ROTATE_PERIOD 9
 #define ROTATE_EXP 2.5
 #define CROP(x,MIN,MAX) x = std::max(std::min(((float)x),((float)(MAX))),((float)(MIN)))
