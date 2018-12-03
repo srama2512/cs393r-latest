@@ -13,6 +13,7 @@ import memory
 import commands
 import cfgstiff
 import mem_objects
+import numpy as np
 
 from task import Task
 from behaviors.asami import ASAMI
@@ -70,11 +71,13 @@ class Playing(StateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class Walk(Node):
-        def __init__(self, vel):
+        def __init__(self, vel_x, vel_y, vel_t):
             super(Playing.Walk, self).__init__()
-            self.vel = vel
+            self.vel_x = vel_x
+            self.vel_y = vel_y
+            self.vel_t = vel_t
         def run(self):
-            commands.setWalkVelocity(self.vel, 0, 0)
+            commands.setWalkVelocity(self.vel_x, self.vel_y, self.vel_t)
 
     class WalkToBeacon(Node):
         def __init__(self, dimA=3, dimS=3):
@@ -92,7 +95,8 @@ class Playing(StateMachine):
             self.amLogger = open('amLogger.txt', 'w')
             self.amLogger.write(str(dimA) + '\n')
             self.currentPhase = 1
-            self.delta_theta = 0.1
+            self.fwd_delta_theta = 0.1
+            self.bwd_delta_theta = 0.1
             self.theta_thresh = 0.1
             self.beacon_bearing = EWMA(0.0, 0.9)
 
@@ -103,14 +107,16 @@ class Playing(StateMachine):
             gtDistance = None
             boundFlag = 0
             theta_vel = 0.0
+
             if beacon.seen:
-                # print('beacon positions: ', beacon.visionDistance, beacon.visionBearing)
-                self.beacon_bearing.update(beacon.visionBearing)
+                print('beacon positions: ', beacon.visionDistance, beacon.visionBearing)
+                if abs(beacon.visionBearing) < math.pi/2:
+                    self.beacon_bearing.update(beacon.visionBearing)
                 print('====> WalkToBeacon: Orig Beacon bearing: {:.3f}, Smoothed Beacon bearing: {:.3f}'.format(beacon.visionBearing, self.beacon_bearing.get()))
 
-                if beacon.visionDistance < 500:
+                if beacon.visionDistance < 800:
                     boundFlag = -1
-                elif beacon.visionDistance > 3000:
+                elif beacon.visionDistance > 3500:
                     boundFlag = 1
 
                 obsHeight = beacon.radius 
@@ -118,13 +124,13 @@ class Playing(StateMachine):
                 # gtDistance = beacon.height # comment this line for running on robot 
 
             if self.beacon_bearing.get() < -self.theta_thresh:
-                theta_vel = -self.delta_theta
+                theta_vel = -self.fwd_delta_theta if self.velx > 0.0 else -self.bwd_delta_theta
             elif self.beacon_bearing.get() > self.theta_thresh:
-                theta_vel = self.delta_theta
-
+                theta_vel = self.fwd_delta_theta if self.velx > 0.0 else self.bwd_delta_theta
+            print('====> WalkToBeacon: Current bearing: {:.3f}, current rot vel: {:.3f}'.format(self.beacon_bearing.get(), theta_vel))
             control = self.velx
             # gtVelx = getGTVelocities(self.velx, 0, 0)[0]
-            print("Control: {:.3f}, obsHeight: {}, gtDistance: {}".format(self.velx, obsHeight, gtDistance))
+            print("Control: {:.3f}, obsHeight: {}, gtDistance: {}, theta_vel: {}".format(self.velx, obsHeight, gtDistance, theta_vel))
             # print("Control: {:.3f}, gtVelx: {:.3f}, obsHeight: {}, gtDistance: {}".format(self.velx, gtVelx, obsHeight, gtDistance))
             if self.lastAction is not None:
                 self.asami.update(self.lastAction, self.getTime()-self.lastActionTime, obsHeight)
@@ -144,7 +150,10 @@ class Playing(StateMachine):
                 self.velx = random.uniform(0.2, 0.7) * self.currentPhase
                 self.lastAction = self.velx
                 self.lastActionTime = self.getTime()
+                np.save('asami_model.np', self.asami.get_params())
+          
             commands.setWalkVelocity(self.velx, 0.0, theta_vel)
+            commands.setHeadPanTilt(pan=0.0, tilt=-10.0, time=1.0)
 
     class Off(Node):
         def run(self):
@@ -175,16 +184,46 @@ class Playing(StateMachine):
             else:
                 commands.setWalkVelocity(0.5, 0.0, 0.0)
 
+    class SimpleWalkToBeacon(Node):
+        def __init__(self, vel_x, vel_y):
+            super(Playing.SimpleWalkToBeacon, self).__init__()
+            self.theta_thresh = 0.1
+            self.beacon_bearing = EWMA(0.0, 0.9)
+            self.vel_x = vel_x
+            self.vel_y = vel_y
+            self.delta_theta = 0.05
+
+
+        def run(self):
+
+            beacon = mem_objects.world_objects[core.WO_BEACON_BLUE_PINK]
+            theta_vel = 0.0
+            if beacon.seen:
+                print('beacon positions: ', beacon.visionDistance, beacon.visionBearing)
+                if abs(beacon.visionBearing) < math.pi/2:
+                    self.beacon_bearing.update(beacon.visionBearing)
+                print('====> WalkToBeacon: Orig Beacon bearing: {:.3f}, Smoothed Beacon bearing: {:.3f}'.format(beacon.visionBearing, self.beacon_bearing.get()))
+
+            if self.beacon_bearing.get() <= -self.theta_thresh:
+                theta_vel = -self.delta_theta
+            elif self.beacon_bearing.get() > self.theta_thresh:
+                theta_vel = self.delta_theta
+          
+            commands.setWalkVelocity(self.vel_x, self.vel_y, theta_vel)
+            commands.setHeadPanTilt(pan=0.0, tilt=-5.0, time=2.0)
+
     def setup(self):
         stand = self.Stand()
-        walk = self.Walk(0.5)
-        walk2 = self.Walk(1.0)
+        walk = self.Walk(0.5, 0.0, 0.04)
+        simple_walk_to_beacon = self.SimpleWalkToBeacon(0.2, 0.0)
+        #walk2 = self.Walk(1.0)
         walk_to_beacon = self.WalkToBeacon()
         sit = pose.Sit()
         off = self.Off()
         center = self.HeadPos(0, 0)
         sensorGT = self.MeasureObservations()
         #self.trans(stand, C)
-        # self.trans(stand, C, walk, T(5.0), sit, C, off)
+        # self.trans(stand, C, walk, T(30.0), sit, C, off)
+        # self.trans(stand, C, center, T(2.0), simple_walk_to_beacon, T(65.0), sit, C, off)
         self.trans(stand, C, center, T(2.0), walk_to_beacon, C, sit, C, off)
         # self.trans(stand, C, center, T(2.0), sensorGT, C, sit, C, off)

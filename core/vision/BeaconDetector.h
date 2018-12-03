@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vision/ObjectDetector.h>
+#include <fstream>
 
 #define ASPECT_RATIO_LOW_BOUND 0.5
 #define ASPECT_RATIO_HIGH_BOUND 2.0
@@ -29,4 +30,5 @@ class BeaconDetector : public ObjectDetector {
   void findBeacons(vector<Blob> &blobs);
  private:
   TextLogger* textlogger;
+  // ofstream myLogger;
 };

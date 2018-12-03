@@ -26,3 +26,5 @@ build/
 lib/
 data/.utnaotoolrc.bak
 data/utnaotoolrc
+*.txt
+*.png

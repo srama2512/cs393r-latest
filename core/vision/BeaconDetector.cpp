@@ -5,6 +5,7 @@
 using namespace Eigen;
 
 BeaconDetector::BeaconDetector(DETECTOR_DECLARE_ARGS) : DETECTOR_INITIALIZE {
+    // myLogger.open("/home/srama/nao/trunk/sensor_observations/heights.txt", std::fstream::out | std::fstream::app)
 }
 
 unsigned char* BeaconDetector::getSegImg(){
@@ -239,7 +240,9 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
         object.visionBearing = cmatrix_.bearing(position);
         object.seen = true;
         object.fromTopCamera = (camera_ == Camera::TOP);
-        object.radius = bblob.first.yi - bblob.second.yf;
+        object.radius = abs(bblob.second.yf - bblob.first.yi);
+
+        // myLogger << "Frame_number: " << vblocks_.frame_info->frame_id << ", Beacon_height: "<< object.radius << "\n";
 
         if(aspect_ratio <= OCCLUDED_ASPECT_RATIO_HIGH_BOUND) {
             object.occluded = true;
