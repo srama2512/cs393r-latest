@@ -251,6 +251,7 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
         // cout << "AR: " << calculateBlobAspectRatio(bblob.first) << ", " << calculateBlobAspectRatio(bblob.second) << endl;
         // cout << "density: " << density(bblob.first) << ", " << density(bblob.second) << endl;
         // cout << "saw " << getName(beacon.first) << " at (" << object.imageCenterX << "," << object.imageCenterY << ") with calculated distance " << object.visionDistance << endl;
+        // cout << "pixel height: " << bblob.first.dy + bblob.second.dy << endl;
     }
     // cout << endl << endl;
 }

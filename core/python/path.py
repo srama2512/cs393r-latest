@@ -152,11 +152,11 @@ class PotentialPathPlanner(PathPlanner):
 		super(PotentialPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._stepsize = 1.0
+		self._stepsize = 0.5
 		self._path = None
 		self._goal_eps = 10.
 		self._k_attr = 1.0
-		self._k_rep = 100000.0
+		self._k_rep = 1000000.0
 		self.q_star_mult = 5.
 		self.max_path_len = 20
 

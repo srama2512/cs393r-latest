@@ -148,7 +148,7 @@ class Playing(LoopingStateMachine):
                 self.targetY = target.imageCenterY
                 self.ewma_dist_target.update(target.visionDistance)
 
-            self._obstacles = [Obstacle(*self._get_egocentric(obs.visionDistance, obs.visionBearing), r=250.0) for obs in opponents]
+            self._obstacles = [Obstacle(*self._get_egocentric(obs.visionDistance, obs.visionBearing), r=300.0) for obs in opponents]
 
             return target.seen
 
@@ -220,7 +220,7 @@ class Playing(LoopingStateMachine):
 
             print ('Distance to Target: ', self.ewma_dist_target.get())
             commands.setWalkVelocity(vel_x, vel_y, vel_t)
-            commands.setHeadPanTilt(pan=pan, tilt=-10., time=0.1)
+            commands.setHeadPanTilt(pan=pan, tilt=-15., time=0.1)
 
 
     def setup(self):
