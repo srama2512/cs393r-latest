@@ -143,21 +143,32 @@ class PathPlanner(object):
 	def __init__(self):
 		self._obstacles = []
 		self._target = None
+		self._path = None
+
+		self._num_frames = 0
+		self._last_planned = -float('inf')
+		self._refresh_rate = 1
 
 	def update(self, obstacles, target):
 		pass
+
+	def _is_path_valid(self):
+		self._num_frames += 1
+		if self._num_frames - self._last_planned < self._refresh_rate:
+			return True
+		self._last_planned = self._num_frames
+		return False
 
 class PotentialPathPlanner(PathPlanner):
 	def __init__(self):
 		super(PotentialPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._stepsize = 0.5
-		self._path = None
+		self._stepsize = 1000.
 		self._goal_eps = 10.
 		self._k_attr = 1.0
 		self._k_rep = 1000000.0
-		self.q_star_mult = 5.
+		self.q_star_mult = 3.
 		self.max_path_len = 20
 
 	def distance_to_target(self, curr_pos, target):
@@ -192,9 +203,14 @@ class PotentialPathPlanner(PathPlanner):
 			grad_obs_x, grad_obs_y = self.compute_obstacle_potential_grad(curr_pos, obs)
 			grad_x += self._k_rep * grad_obs_x
 			grad_y += self._k_rep * grad_obs_y
-		return grad_x, grad_y
+		grad_norm = np.sqrt(grad_x ** 2 + grad_y ** 2)
+		print ('===> grad_norm :',  grad_norm)
+		return grad_x / grad_norm, grad_y / grad_norm
 
 	def update(self, obstacles, target):
+		if self._is_path_valid():
+			return self._path
+
 		if target is None:
 			return None
 		self._path = []
@@ -273,7 +289,6 @@ class GeometricPathPlanner(PathPlanner):
 		self._obstacles = []
 		self._target = None
 		self._vis_graph = self.VisibilityGraph()
-		self._path = None
 
 	def _get_tangent_pts(self, obs, pt):
 		dx = obs.pos.x - pt.x
@@ -333,6 +348,9 @@ class GeometricPathPlanner(PathPlanner):
 			self._update_visibility_graph(o4, tgt, io4, i2, ignore_obs=ignore_obs + [intersecting_obs[0][0]])
 
 	def update(self, obstacles, target):
+		if self._is_path_valid():
+			return self._path
+
 		if target is None:
 			return None
 		self._obstacles = merge_obstacles(obstacles)
@@ -387,7 +405,6 @@ class RRTPathPlanner(PathPlanner):
 		super(RRTPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._path = None
 		self._delta_q = 100.
 		self._target_bias = 0.05
 		self._tree = self.RRT()
@@ -538,7 +555,6 @@ class RRTStarPathPlanner(PathPlanner):
 		super(RRTStarPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._path = None
 		self._delta_q = 200.
 		self._target_bias = 0.05
 		self._tree = self.RRT()
@@ -672,14 +688,13 @@ class RRTStarPathPlanner(PathPlanner):
 		return [(src, path[-1][1], 'line')]
 
 	def update(self, obstacles, target):
+		if self._is_path_valid():
+			return self._path
+
 		if target is None:
 			return None
 		self._obstacles = obstacles
 		self._target = target
-		if self._inside_obstacles(Point2D(0., 0.)):
-			return self._path
-		# if self._is_old_path_valid():
-		# 	return self._path
 		self._path = self._plan()
 		self._path = self._simplify_path(self._path)
 

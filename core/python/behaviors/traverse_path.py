@@ -102,6 +102,22 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
             commands.setWalkVelocity(0., 0., 0.)
 
+    class BackOff(Node):
+        def __init__(self, duration=1.0):
+            super(Playing.BackOff, self).__init__()
+            self.duration = duration
+            self.vel_x = -0.5
+            self.start_time = self.getTime()
+
+        def run(self):
+            print ('====> Backing off inside obstacle')
+            if self.getTime() - self.start_time > self.duration:
+                commands.setWalkVelocity(0., 0., 0.)
+                self.finish()
+            else:
+                commands.setWalkVelocity(self.vel_x, 0., 0.)
+
+
     class TraversePath(Node):
         def __init__(self, planner_type='geo', delta_pan=6, dist_target_thresh=500.0):
             super(Playing.TraversePath, self).__init__()
@@ -129,11 +145,15 @@ class Playing(LoopingStateMachine):
             self.min_obstacle_vel = 0.2
 
             self.last_seen = self.getTime()
+            self.last_null_path = self.getTime()
 
             self.ewma_dist_target = EWMA(10000.0, 0.95)
             self.dist_target_thresh = dist_target_thresh
 
-        # TODO add reset()
+        def reset(self):
+            super(Playing.TraversePath, self).reset()
+            self.last_seen = self.getTime()
+            self.last_null_path = self.getTime()
 
         def _get_egocentric(self, dist, bearing):
             return dist * math.cos(bearing), dist * math.sin(bearing)
@@ -197,13 +217,18 @@ class Playing(LoopingStateMachine):
 
                 if self.getTime() - self.last_seen > 2.0:
                     commands.setWalkVelocity(0.0, 0.0, 0.0)
-                    self.postFailure()
+                    self.postSignal('target')
 
             self._print_path(path)
 
             if path is None or len(path) == 0:
+                if self.getTime() - self.last_null_path > 1.0:
+                    commands.setWalkVelocity(0, 0, 0)
+                    self.postSignal('obstacle')
+
                 vel_x, vel_y, vel_t = 0, 0, 0
             else:
+                self.last_null_path = self.getTime()
                 pt = path[0][1]
                 tx, ty = pt.x, pt.y
                 d = math.sqrt(tx ** 2 + ty ** 2)
@@ -224,10 +249,11 @@ class Playing(LoopingStateMachine):
 
 
     def setup(self):
-        traverse_path = self.TraversePath(planner_type='apm')
+        traverse_path = self.TraversePath(planner_type='geo')
         stand = self.Stand()
         center = self.HeadPos(0, 0)
         off = self.Off()
+        backoff = self.BackOff()
         leftSearch = self.SearchForTarget(75, -22, 2.0)
         rightSearch = self.SearchForTarget(-75, -22, 2.0)
 
@@ -240,4 +266,6 @@ class Playing(LoopingStateMachine):
         self.add_transition(rightSearch, C, traverse_path)
         self.add_transition(rightSearch, F, center)
         self.add_transition(traverse_path, C, self.Stand(), C, pose.Sit(), C, off)
-        self.add_transition(traverse_path, F, center)
+        self.add_transition(traverse_path, S('target'), center)
+        self.add_transition(traverse_path, S('obstacle'), backoff)
+        self.add_transition(backoff, C, traverse_path)
