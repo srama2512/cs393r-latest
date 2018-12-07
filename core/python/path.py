@@ -1,5 +1,6 @@
 import pdb
 import math
+import time
 import heapq
 import numpy as np
 from numpy.random import uniform as randu
@@ -149,6 +150,18 @@ class PathPlanner(object):
 		self._last_planned = -float('inf')
 		self._refresh_rate = 1
 
+		self._num_plans = 0
+		self._total_time_spent_planning = 0.
+
+	def _update_plan_time(self, t):
+		self._num_plans += 1
+		self._total_time_spent_planning += t
+
+	def get_average_time(self):
+		if self._num_plans == 0:
+			return 0.
+		return self._total_time_spent_planning / float(self._num_plans)
+
 	def update(self, obstacles, target):
 		pass
 
@@ -204,7 +217,7 @@ class PotentialPathPlanner(PathPlanner):
 			grad_x += self._k_rep * grad_obs_x
 			grad_y += self._k_rep * grad_obs_y
 		grad_norm = np.sqrt(grad_x ** 2 + grad_y ** 2)
-		print ('===> grad_norm :',  grad_norm)
+
 		return grad_x / grad_norm, grad_y / grad_norm
 
 	def update(self, obstacles, target):
@@ -213,6 +226,8 @@ class PotentialPathPlanner(PathPlanner):
 
 		if target is None:
 			return None
+
+		st_time = time.time()
 		self._path = []
 		curr_pos = Point2D(0., 0.)
 		dist = self.distance_to_target(curr_pos, target)
@@ -227,6 +242,9 @@ class PotentialPathPlanner(PathPlanner):
 			new_pos = self.get_new_position(curr_pos, grad_x, grad_y)
 			self._path.append((curr_pos, new_pos, 'line'))
 			curr_pos = new_pos
+		time_to_plan = time.time() - st_time
+		self._update_plan_time(time_to_plan)
+
 		return self._path
 
 class GeometricPathPlanner(PathPlanner):
@@ -363,8 +381,11 @@ class GeometricPathPlanner(PathPlanner):
 			print ('\n\n\n Warning: Source inside obstacle circle \n\n\n')
 			return self._path
 		try:
+			st_time = time.time()
 			self._update_visibility_graph(Point2D(0, 0), self._target)
 			self._path = self._vis_graph.dijkstras()
+			time_to_plan = time.time() - st_time
+			self._update_plan_time(time_to_plan)
 		except:
 			print ('\n\n\n Warning: Cannot calculate tangent from a point within the circle \n\n\n')
 
@@ -695,7 +716,10 @@ class RRTStarPathPlanner(PathPlanner):
 			return None
 		self._obstacles = obstacles
 		self._target = target
+		st_time = time.time()
 		self._path = self._plan()
 		self._path = self._simplify_path(self._path)
+		time_to_plan = time.time() - st_time
+		self._update_plan_time(time_to_plan)
 
 		return self._path

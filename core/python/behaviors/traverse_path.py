@@ -150,6 +150,8 @@ class Playing(LoopingStateMachine):
             self.ewma_dist_target = EWMA(10000.0, 0.95)
             self.dist_target_thresh = dist_target_thresh
 
+            self.start_time = self.getTime()
+
         def reset(self):
             super(Playing.TraversePath, self).reset()
             self.last_seen = self.getTime()
@@ -240,6 +242,11 @@ class Playing(LoopingStateMachine):
                     vel_x = max(self.min_obstacle_vel, vel_x)
 
             if self.ewma_dist_target.get() < self.dist_target_thresh:
+                time_to_reach = self.getTime() - self.start_time
+                print("\n\n\n\n=========== FINISHING ===========")
+                print("====> Time to reach target: %.3f (s)" % time_to_reach)
+                print("====> Avg. time to path plan: %.3f (s)" % self.planner.get_average_time())
+
                 vel_x, vel_y, vel_t = 0.0, 0.0, 0.0
                 self.finish()
 
