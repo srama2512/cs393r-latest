@@ -14,10 +14,10 @@
 
 const float BALL_RADIUS = 31;
 
-const float FIELD_Y = 2000;
-const float FIELD_X = 3000;
-const float GRASS_Y = 2500;
-const float GRASS_X = 5000;
+const float FIELD_Y = 3600;
+const float FIELD_X = 5400;
+const float GRASS_Y = 3800;
+const float GRASS_X = 5600;
 
 const float HALF_FIELD_Y = FIELD_Y/2.0;
 const float HALF_FIELD_X = FIELD_X/2.0;
@@ -49,11 +49,11 @@ const float CIRCLE_HEX_LENGTH = 2.0*(CIRCLE_RADIUS*sinf(DEG_T_RAD*30.0));
 
 const Rectangle FIELD =
 Rectangle( Point2D( -FIELD_X / 2,  FIELD_Y / 2 ),
-     Point2D(  FIELD_X / 2, -FIELD_Y / 2 ) );
+	   Point2D(  FIELD_X / 2, -FIELD_Y / 2 ) );
 
 const Rectangle GRASS =
 Rectangle( Point2D( -GRASS_X / 2,  GRASS_Y / 2 ),
-     Point2D(  GRASS_X / 2, -GRASS_Y / 2 ) );
+	   Point2D(  GRASS_X / 2, -GRASS_Y / 2 ) );
 
 // circle and cross points
 const Point2D circleLocation = Point2D(0, 0);

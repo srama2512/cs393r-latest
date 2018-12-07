@@ -154,7 +154,7 @@ bool SimulatedPlayer::processFrame(WorldObjectBlock* simulationMem, GameStateBlo
   // run localization
   if (locMode){
     og_.generateAllObservations();
-    // core->localization_->processFrame();
+    core->localization_->processFrame();
     core->opponents_->processFrame();
   } else {
     og_.generateGroundTruthObservations();

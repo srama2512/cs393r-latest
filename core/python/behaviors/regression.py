@@ -42,6 +42,9 @@ class IncrementalRegression(object):
 		""" x is n x (d+1) matrix """
 		return np.dot(x, self.beta) + self.alpha 
 
+	def get_params(self):
+		return (self.alpha, self.beta.copy())
+
 	@staticmethod
 	def getPolyStack(x, d):
 		data = [x[:, np.newaxis]**i for i in range(1, d+1)]

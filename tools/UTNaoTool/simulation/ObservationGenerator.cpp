@@ -121,8 +121,8 @@ void ObservationGenerator::generateBeaconObservations() {
     WO_BEACON_PINK_YELLOW,
     WO_BEACON_YELLOW_PINK
   };
-  obsSelf.loc = gtSelf.loc;
-  obsSelf.orientation = gtSelf.orientation;
+  // obsSelf.loc = gtSelf.loc;
+  // obsSelf.orientation = gtSelf.orientation;
   for(auto t : types) {
     getObject(gtBeacon, obsBeacon, t);
     float bearing = gtSelf.loc.getBearingTo(gtBeacon.loc,gtSelf.orientation);

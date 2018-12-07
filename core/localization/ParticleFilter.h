@@ -38,10 +38,10 @@ class ParticleFilter {
     int kmeans_k_;
     int kmeans_iterations_;
 
-    double x_clipping_min;
-    double x_clipping_max;
-    double y_clipping_min;
-    double y_clipping_max;
+    // double x_clipping_min;
+    // double x_clipping_max;
+    // double y_clipping_min;
+    // double y_clipping_max;
 
     vector<double> backup_weights;
 
@@ -56,7 +56,7 @@ class ParticleFilter {
     void printParticles();
     void addRandomParticles();
     bool landmarksSeen();
-    void clipParticles();
+    // void clipParticles();
     double computeEntropy();
     Particle getKmeansPose();
 };

@@ -58,6 +58,9 @@ class ASAMI(object):
 		c_t_stack = self.psa(c_t)
 		return (self.At.predict(c_t_stack)-self.At.alpha)
 
+	def get_params(self):
+		return {'At': self.At.get_params(), 'St': self.St.get_params()}
+		
 if __name__ == '__main__':
 	obs_t = np.linspace(5.0, 40.0, 100)
 	t = np.log(obs_t) + np.random.randn(*obs_t.shape) * 0.5

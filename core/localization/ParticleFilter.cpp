@@ -32,20 +32,20 @@ void ParticleFilter::init(Point2D loc, float orientation) {
   kmeans_k_ = 2;
   kmeans_iterations_ = 5;
 
-  x_clipping_min = 350.0;
-  x_clipping_max = 1000.0;
-  y_clipping_min = -700.0;
-  y_clipping_max = 700.0;
+  // x_clipping_min = 350.0;
+  // x_clipping_max = 1000.0;
+  // y_clipping_min = -700.0;
+  // y_clipping_max = 700.0;
 
   reset();
 }
 
-void ParticleFilter::clipParticles() {
-  for(auto& p : particles()) {
-    p.x = clip(p.x, x_clipping_min, x_clipping_max);
-    p.y = clip(p.y, y_clipping_min, y_clipping_max);
-  }
-}
+// void ParticleFilter::clipParticles() {
+//   for(auto& p : particles()) {
+//     p.x = clip(p.x, x_clipping_min, x_clipping_max);
+//     p.y = clip(p.y, y_clipping_min, y_clipping_max);
+//   }
+// }
 
 double ParticleFilter::getGaussianLogProb(double mu, double sigma, double x) {
   return -loge(sqrt(2 * M_PI) * sigma) + (-(mu - x) * (mu - x) / (2 * sigma * sigma));
@@ -156,8 +156,8 @@ void ParticleFilter::addRandomParticles() {
     int idx = rand() % n_particles;
     auto& p = particles()[idx];
 
-    p.x = Random::inst().sampleU(-2700, 2700);
-    p.y = Random::inst().sampleU(-1800, 1800);
+    p.x = Random::inst().sampleU(-HALF_FIELD_X, HALF_FIELD_X);
+    p.y = Random::inst().sampleU(-HALF_FIELD_Y, HALF_FIELD_Y);
     p.t = Random::inst().sampleU(-M_PI, M_PI);
   }
 }
@@ -371,8 +371,8 @@ void ParticleFilter::reset() {
   particles().resize(n_particles);
 
   for(auto& p : particles()) {
-    p.x = Random::inst().sampleU(-2700, 2700);
-    p.y = Random::inst().sampleU(-1800, 1800);
+    p.x = Random::inst().sampleU(-HALF_FIELD_X, HALF_FIELD_X);
+    p.y = Random::inst().sampleU(-HALF_FIELD_Y, HALF_FIELD_Y);
     p.t = Random::inst().sampleU(-M_PI, M_PI);
     p.w = loge((double) Random::inst().sampleU());
   }

@@ -23,8 +23,8 @@ from state_machine import Node, C, T, StateMachine
 
 observationTuple = namedtuple('observationTuple', ['height', 'bearing', 'beacon_id', 'command', 'dt'])
 
-FIELD_Y = 3600
-FIELD_X = 5400
+FIELD_Y = 2000
+FIELD_X = 3000
 
 def _norm_angle(theta):
     return math.atan2(math.sin(theta), math.cos(theta))
@@ -119,11 +119,12 @@ class Playing(StateMachine):
             self.gtStateLogger = open('state_log.txt', 'w')
             self.gtStateLogger.write('X, Y, theta\n')
             self.gtStateLogger.flush()
-            self.control_sequence = list(range(len(self.control_to_action)))
-            self.generate_control_sequence()
+            # self.control_sequence = list(range(len(self.control_to_action)))
+            # self.generate_control_sequence()
             self.status = 0
             self.scanningLeft = True
-            self.headPanThres = 70.0 * core.DEG_T_RAD
+            # self.headPanThres = 70.0 * core.DEG_T_RAD
+            self.headPanThres = 60.0 * core.DEG_T_RAD
 
         def generate_control_sequence(self):
             a_idxs = list(range(len(self.a_vels)))
@@ -140,11 +141,8 @@ class Playing(StateMachine):
         def run(self):
 
             beacons = map(lambda x: mem_objects.world_objects[x], self.beaconList)
-            # robot_state = mem_objects.memory.world_objects.getObjPtr(mem_objects.memory.robot_state.WO_SELF)
-            # locX, locY = robot_state.loc.x, robot_state.loc.y
-            # locTheta = robot_state.orientation
-
-            playerObj =  mem_objects.world_objects[core.WO_TEAM5]
+            playerObj = mem_objects.memory.world_objects.getObjPtr(mem_objects.memory.robot_state.WO_SELF)
+            # playerObj =  mem_objects.world_objects[core.WO_TEAM5]
             locX = playerObj.loc.x
             locY = playerObj.loc.y
             locTheta = playerObj.orientation
@@ -173,20 +171,26 @@ class Playing(StateMachine):
                 self.gtStateLogger.write('{}, {}, {}\n'.format(locX, locY, _norm_angle(locTheta)))
 
             if self.lastControl is None or self.getTime() - self.lastControlTime > 3.0:
-                #     self.lastControl = random.randint(0, len(self.control_to_action)-1)
-                #     self.lastControlTime = self.getTime()
-                # else:
-                #     self.lastControl = self.
-                self.lastControl = self.control_sequence[self.status]
-                self.status = (self.status + 1)%len(self.control_to_action)
+                self.lastControl = random.randint(0, len(self.control_to_action)-1)
                 self.lastControlTime = self.getTime()
 
-            # if self.getTime() - self.lastBeaconSeenTime > 5.0:
-            #     self.lastControl = 
+                # self.lastControl = self.control_sequence[self.status]
+                # self.status = (self.status + 1)%len(self.control_to_action)
+                # self.lastControlTime = self.getTime()
+
             # nuclear option
-            if abs(locX) > FIELD_X / 2 or abs(locY) > FIELD_Y / 2:
+            if abs(locX) > FIELD_X * 0.4 or abs(locY) > FIELD_Y * 0.4:
                 b_to_origin = _norm_angle(math.atan2(locY, locX) + math.pi - locTheta)
                 self.lastControl = np.argmin((b_to_origin - np.array(self.b_angles))**2) + len(self.b_angles)*2
+                self.lastControlTime = self.getTime()
+
+            # Walk backward
+            if core.sensor_values[core.headRear] > 0.5:
+                self.lastControl = random.choice([1, 9, 17, 25, 33])
+                self.lastControlTime = self.getTime()
+            # Walk forward
+            elif core.sensor_values[core.headFront] > 0.5:
+                self.lastControl = random.choice([1, 9, 17, 25, 33])-1
                 self.lastControlTime = self.getTime()
 
             action = self.control_to_action[self.lastControl]
@@ -199,11 +203,11 @@ class Playing(StateMachine):
             elif pan < -self.headPanThres:
                 self.scanningLeft = True
 
-            delta = 20 * core.DEG_T_RAD
+            delta = 30 * core.DEG_T_RAD
             if self.scanningLeft:
-                commands.setHeadPan(delta, 1.0, True)
+                commands.setHeadPan(delta, 0.5, True)
             else:
-                commands.setHeadPan(-delta, 1.0, True)
+                commands.setHeadPan(-delta, 0.5, True)
 
 
 
@@ -214,6 +218,11 @@ class Playing(StateMachine):
                 memory.speech.say("turned off stiffness")
                 self.finish()
 
+    class PrintSensors(Node):
+        def run(self):
+            print('headFront: {:15.5f}, headMiddle: {:15.5f}, headRead: {:15.5f}'.format(core.sensor_values[core.headFront], 
+                                                                                         core.sensor_values[core.headMiddle],
+                                                                                         core.sensor_values[core.headRear]))
 
     def setup(self):
         stand = self.Stand()
@@ -223,5 +232,7 @@ class Playing(StateMachine):
         sit = pose.Sit()
         off = self.Off()
         center = self.HeadPos(0, 0)
+        print_sensors = self.PrintSensors()
 
         self.trans(stand, C, center, T(2.0), explore, C, sit, C, off)
+        # self.trans(stand, C, print_sensors, T(500.0), sit, C, off)
