@@ -171,7 +171,8 @@ class Playing(StateMachine):
                 self.gtStateLogger.write('{}, {}, {}\n'.format(locX, locY, _norm_angle(locTheta)))
 
             if self.lastControl is None or self.getTime() - self.lastControlTime > 3.0:
-                self.lastControl = random.randint(0, len(self.control_to_action)-1)
+                self.lastControl = random.choice([1, 5, 9, 11, 13, 27, 33, 34, 39])
+                # self.lastControl = random.randint(0, len(self.control_to_action)-1)
                 self.lastControlTime = self.getTime()
 
                 # self.lastControl = self.control_sequence[self.status]

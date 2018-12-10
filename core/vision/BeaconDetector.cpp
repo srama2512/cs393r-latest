@@ -237,13 +237,14 @@ void BeaconDetector::findBeacons(vector<Blob> &blobs) {
 
         auto position = cmatrix_.getWorldPosition(object.imageCenterX, object.imageCenterY, heights[beacon.first]);
         object.visionDistance = bdistance;
-        object.visionBearing = cmatrix_.bearing(position);
+        object.visionBearing = cmatrix_.bearing(positoin);
         object.seen = true;
         object.fromTopCamera = (camera_ == Camera::TOP);
         object.radius = abs(bblob.second.yf - bblob.first.yi);
 
         // myLogger << "Frame_number: " << vblocks_.frame_info->frame_id << ", Beacon_height: "<< object.radius << "\n";
-
+        cout << "Frame_number: " << vblocks_.frame_info->frame_id << ", Beacon_bearing: "<< object.visionBearing << "\n";
+        
         if(aspect_ratio <= OCCLUDED_ASPECT_RATIO_HIGH_BOUND) {
             object.occluded = true;
         }
