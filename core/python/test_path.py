@@ -122,7 +122,7 @@ p._target = Point2D(196, 151)
 # p._obstacles = [Obstacle(0, 0, 30), Obstacle(50, 0, 30), Obstacle(25, 60, 30)]
 
 if args.planner == 'apm':
-	planner = PotentialPathPlanner()
+	planner = PotentialPathPlanner(stepsize=1., goal_eps=10., k_attr=1.0, k_rep=10000., q_star_mult=3., max_path_len=2000)
 elif args.planner == 'geo':
 	planner = GeometricPathPlanner()
 elif args.planner == 'rrt':

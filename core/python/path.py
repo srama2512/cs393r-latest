@@ -173,16 +173,16 @@ class PathPlanner(object):
 		return False
 
 class PotentialPathPlanner(PathPlanner):
-	def __init__(self):
+	def __init__(self, stepsize=1000., goal_eps=10., k_attr=1.0, k_rep=1000000., q_star_mult=3, max_path_len=20):
 		super(PotentialPathPlanner, self).__init__()
 		self._obstacles = []
 		self._target = None
-		self._stepsize = 1000.
-		self._goal_eps = 10.
-		self._k_attr = 1.0
-		self._k_rep = 1000000.0
-		self.q_star_mult = 3.
-		self.max_path_len = 20
+		self._stepsize = stepsize
+		self._goal_eps = goal_eps
+		self._k_attr = k_attr
+		self._k_rep = k_rep
+		self.q_star_mult = q_star_mult
+		self.max_path_len = max_path_len
 
 	def distance_to_target(self, curr_pos, target):
 		return dist_point2D(curr_pos, target)
