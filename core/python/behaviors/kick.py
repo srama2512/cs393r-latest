@@ -116,6 +116,11 @@ class Playing(LoopingStateMachine):
         def run(self):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
+    class StiffenAll(Node):
+        def run(self):
+            memory.walk_request.noWalk()
+            commands.setStiffness(cfgstiff.One)
+
     class PositionToKick(Node):
         def __init__(self, goal_b_threshold=0.1, ball_x_threshold=135.0, ball_y_offset=-55.0, ball_y_threshold=7.0):
             super(Playing.PositionToKick, self).__init__()
@@ -378,7 +383,7 @@ class Playing(LoopingStateMachine):
         # self.add_transition(kick, C, dribble)
 
         #self.trans(self.PositionToKick(), C)
-        self.trans(self.Stand(), C, self.Kick(), C, self.Stand(), C, pose.Sit(), C, self.Off())
+        self.trans(self.Stand(), C, self.StiffenAll(), T(1.0), self.Kick(), C, self.Stand(), C, pose.Sit(), C, self.Off())
         # self.trans(self.Stand(), C, self.Kick(), C, self.Unstiffen(), C)
 
         # self.trans(self.Stand(), C, self.Unstiffen(), C)

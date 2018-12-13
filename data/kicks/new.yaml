@@ -151,7 +151,7 @@ keyframes:
       RElbowYaw: 0.0902950983148785
       RElbowRoll: -2.90283031647681
   - name: Keyframe 7
-    frames: 50
+    frames: 70
     joints:
       HeadYaw: 0.0
       HeadPitch: 0
@@ -176,7 +176,7 @@ keyframes:
       RElbowYaw: 0
       RElbowRoll: 0
   - name: Keyframe 8
-    frames: 50
+    frames: 70
     joints:
       HeadYaw: 0.0
       HeadPitch: 0

@@ -96,6 +96,7 @@ class Playing(LoopingStateMachine):
             if self.getFrames() <= 3:
                 memory.walk_request.noWalk()
                 memory.kick_request.setFwdKick()
+            commands.setStiffness(cfgstiff.One)
             if self.getFrames() > 10 and not memory.kick_request.kick_running_:
                 self.finish()
 
@@ -103,13 +104,19 @@ class Playing(LoopingStateMachine):
         def run(self):
             commands.setWalkVelocity(0.5, 0, 0)
 
+    class StiffenAll(Node):
+        def run(self):
+            memory.walk_request.noWalk()
+            commands.setStiffness(cfgstiff.One)
+
     class WalkToTarget(Node):
-        def __init__(self, d_threshold=250.0, d_target_compensation=200.0):
+        def __init__(self, d_threshold=350.0, d_target_compensation=200.0):
             super(Playing.WalkToTarget, self).__init__()
             self.d_threshold = d_threshold
             self.d_target_compensation = d_target_compensation
             self.last_seen = 0
             self.pid_position = PIDPosition()
+            self.pid_position.max_x_res = 0.7
             self.pid_position.max_t_res = 0.2
             self.pid_position.set_const_x(1.2e-3, 0., 0.)
             self.pid_position.set_const_y(4.5e-3, 1e-4, 0., 1000.0)
@@ -156,7 +163,7 @@ class Playing(LoopingStateMachine):
             commands.setHeadPanTilt(pan=self.pan, tilt=self.tilt, time=self.duration)
 
     class PositionToKick(Node):
-        def __init__(self, goal_b_threshold=0.1, goal_b_offset=-0.3, ball_x_threshold=200.0, ball_y_offset=-75.0, ball_y_threshold=7.0):
+        def __init__(self, goal_b_threshold=0.1, goal_b_offset=-0.0, ball_x_threshold=220.0, ball_y_offset=-60.0, ball_y_threshold=7.0):
             super(Playing.PositionToKick, self).__init__()
             self.goal_b_threshold = goal_b_threshold
             self.goal_b_offset = goal_b_offset
@@ -165,12 +172,16 @@ class Playing(LoopingStateMachine):
             self.ball_y_threshold = ball_y_threshold
             self.last_seen = 0
 
-            self.forward_compensation = 100.0
             self.pid_position = PIDPosition()
-            self.pid_position.set_const_x(1.5e-3, 1e-5, 0., 1000.0)
-            self.pid_position.set_const_y(3.0e-3, 1e-4, 0., 1000.0)
+            self.pid_position.set_const_x(1.5e-3, 1e-5, 5e-2, 1000.0)
+            self.pid_position.set_const_y(3.0e-3, 1e-4, 5e-2, 1000.0)
             self.pid_position.set_const_t(1.2, 0., 0.)
+            self.pid_position.max_x_res = 0.4
+
             self.pid_position.max_t_res = 0.2
+
+            self.ball_away_thresh = 600.0
+            self.ball_fwd_dist_sm = EWMA(350.0, 0.9)
 
         def run(self):
             ball = memory.world_objects.getObjPtr(core.WO_BALL)
@@ -180,37 +191,43 @@ class Playing(LoopingStateMachine):
 
                 ball_side_dist = ball.visionDistance * math.sin(ball.visionBearing)
                 ball_fwd_dist = ball.visionDistance * math.cos(ball.visionBearing)
-                print('===> PositionToKick: visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(goal.visionDistance, 
+                self.ball_fwd_dist_sm.update(ball_fwd_dist)
+                print('===> PositionToKick: visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}   ball_fwd_dist_sm: {}'.format(goal.visionDistance, 
                                                                                                                                                goal.visionBearing, 
                                                                                                                                                ball_side_dist,
-                                                                                                                                               ball_fwd_dist))
+                                                                                                                                               ball_fwd_dist,
+                                                                                                                                               self.ball_fwd_dist_sm.get()))
 
-                if abs(goal.visionBearing - self.goal_b_offset) < self.goal_b_threshold and abs(ball_side_dist - self.ball_y_offset) < self.ball_y_threshold and abs(ball_fwd_dist) < self.ball_x_threshold:
+                if abs(goal.visionBearing - self.goal_b_offset) < self.goal_b_threshold and abs(ball_side_dist - self.ball_y_offset) < self.ball_y_threshold and abs(self.ball_fwd_dist_sm.get()) < self.ball_x_threshold:
                     print('===> PositionToKick: Reached within bearing of the goal and distance of the ball!')
-                    print('===> PositionToKick: FINAL - visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}'.format(goal.visionDistance, 
+                    print('===> PositionToKick: FINAL - visionDistanceGoal: {}   visionBearingGoal: {}   ball_side_dist: {}   ball_fwd_dist: {}  ball_fwd_dist_sm: {}'.format(goal.visionDistance, 
                                                                                                                                                goal.visionBearing, 
                                                                                                                                                ball_side_dist,
-                                                                                                                                               ball_fwd_dist))
+                                                                                                                                               ball_fwd_dist,
+                                                                                                                                               self.ball_fwd_dist_sm.get()))
                     commands.setWalkVelocity(0.0, 0.0, 0.0)
                     self.finish()
                 else:
-                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist, ball_side_dist - self.ball_y_offset, goal.visionBearing - self.goal_b_offset))
+                    (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (self.ball_fwd_dist_sm.get(), ball_side_dist - self.ball_y_offset, goal.visionBearing - self.goal_b_offset))
                     print ("===> PositionToKick: vel_x : ", vel_x, "vel_y :", vel_y, "vel_t : ", vel_t)
                     commands.setWalkVelocity(vel_x, vel_y, vel_t)
+
+                if self.ball_fwd_dist_sm.get() > self.ball_away_thresh:
+                    self.postFailure() 
             else:
                 print('===> PositionToKick: Not seeing either the ball (or) the goal')
                 if self.getTime() - self.last_seen > 2.0:
                     self.postFailure()
 
     class Dribble(Node):
-        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=2000.0, ball_x_threshold=220.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
+        def __init__(self, goal_b_threshold=0.15, goal_x_threshold=2500.0, ball_y_threshold=50.0, vel_x=0.5, vel_y=0.6, omega=0.1):
             self.goal_b_threshold = goal_b_threshold
             self.goal_x_threshold = goal_x_threshold
-            self.ball_x_threshold = ball_x_threshold
             self.ball_y_threshold = ball_y_threshold
             self.last_seen = 0
 
             self.pid_position = PIDPosition()
+            self.pid_position.max_x_res = 0.7
             self.pid_position.max_t_res = 0.2
             self.pid_position.set_const_x(1.2e-3, 0., 0.)
             self.pid_position.set_const_y(4.5e-3, 1e-4, 0., 1000.0)
@@ -218,7 +235,7 @@ class Playing(LoopingStateMachine):
             self.ball_fwd_compensation = 150
             self.ball_fwd_gap = 200
 
-            self.goal_b_ewma = EWMA(0., 0.95)
+            self.goal_b_ewma = EWMA(0.2, 0.95)
             self.goal_d_ewma = EWMA(10000., 0.80)
 
             self.beacon_dict = {k:0 for k in list_of_beacons}
@@ -245,12 +262,12 @@ class Playing(LoopingStateMachine):
                     goal_vision_bearing = goal.visionBearing
                     goal_fwd_dist = goal.visionDistance * math.cos(goal.visionBearing)
                 else:
-                    BY_cnt = self.beacon_dict[core.WO_BEACON_BLUE_YELLOW] + self.beacon_dict[core.WO_BEACON_YELLOW_BLUE]
-                    BP_cnt = self.beacon_dict[core.WO_BEACON_PINK_BLUE] + self.beacon_dict[core.WO_BEACON_BLUE_PINK]
-                    if BY_cnt > BP_cnt:
-                        goal_vision_bearing = 1.0
-                    else:
-                        goal_vision_bearing = -1.0
+                    # BY_cnt = self.beacon_dict[core.WO_BEACON_BLUE_YELLOW] + self.beacon_dict[core.WO_BEACON_YELLOW_BLUE]
+                    # BP_cnt = self.beacon_dict[core.WO_BEACON_PINK_BLUE] + self.beacon_dict[core.WO_BEACON_BLUE_PINK]
+                    # if BY_cnt > BP_cnt:
+                    goal_vision_bearing = 1.0
+                    # else:
+                    #     goal_vision_bearing = -1.0
                     goal_fwd_dist = self.goal_x_threshold + 1.0
 
                 self.goal_b_ewma.update(goal_vision_bearing)
@@ -274,9 +291,11 @@ class Playing(LoopingStateMachine):
                     (vel_x, vel_y, vel_t) = self.pid_position.update((0, 0, 0), (ball_fwd_dist - self.ball_fwd_gap, ball_side_dist, self.goal_b_ewma.get()))
 
                 commands.setWalkVelocity(vel_x, vel_y, vel_t)
+                commands.setHeadPanTilt(pan=0.0, tilt=-15.0, time=2.0)
+                
             else:
                 print('===> Dribble: Not seeing the ball')
-                if self.getTime() - self.last_seen > 2.0:
+                if self.getTime() - self.last_seen > 1.0:
                     commands.setWalkVelocity(0., 0., 0.)
                     self.postFailure()
 
@@ -397,6 +416,7 @@ class Playing(LoopingStateMachine):
         leftSearch = self.SearchForBall(75, -22, 2.0)
         rightSearch = self.SearchForBall(-75, -22, 2.0)
         rotateBody = self.RotateBody()
+        stiffenBody = self.StiffenAll()
 
         # self.trans(stand, C, center, T(4.0), leftSearch, C, rightSearch, C, lookatball, C, walk_to_target, C, ptd, C, self.Stand(), C)
         
@@ -415,7 +435,8 @@ class Playing(LoopingStateMachine):
         self.add_transition(dribble, F, center)
         self.add_transition(ptk, C, stand_at_ball)
         self.add_transition(ptk, F, dribble)
-        self.add_transition(stand_at_ball, C, kick)
+        self.add_transition(stand_at_ball, C, stiffenBody)
+        self.add_transition(stiffenBody, T(1.0), kick)
         self.add_transition(kick, C, dribble)
 
         #self.trans(self.PositionToKick(), C)

@@ -40,6 +40,11 @@ class Playing(LoopingStateMachine):
                 memory.speech.say("turned off stiffness")
                 self.finish()
 
+    class StiffenAll(Node):
+        def run(self):
+            memory.walk_request.noWalk()
+            commands.setStiffness(cfgstiff.One)
+
     class Unstiffen(Node):
         def run(self):
             memory.walk_request.noWalk()

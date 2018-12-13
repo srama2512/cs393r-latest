@@ -53,12 +53,16 @@ void KinematicsModule::calculatePose(float* joints, float* sensors, float* dimen
     frames_in_air_=0;
     body_model->feet_on_ground_inst_ = true;
   }
-  if (frames_in_air_ > 75) { // Increased from 25 for Allison (51) since foot sensors zero out easy
-    if (body_model->feet_on_ground_) std::cout << "BodyModel: I'm flying !\n";
-    body_model->feet_on_ground_=false;
-  } else {
-    body_model->feet_on_ground_=true;
-  }
+  // if (frames_in_air_ > 400) { // Increased from 25 for Allison (51) since foot sensors zero out easy
+  //   if (body_model->feet_on_ground_) std::cout << "BodyModel: I'm flying !\n";
+  //   body_model->feet_on_ground_=false;
+  // } else {
+  //   body_model->feet_on_ground_=true;
+  // }
+  // TODO - remove this comment later
+  
+  body_model->feet_on_ground_=true;
+  body_model->feet_on_ground_inst_=true;
 
   calcRelCenterOfMassFromFSRs(sensors, dimensions, body_model);
 }
